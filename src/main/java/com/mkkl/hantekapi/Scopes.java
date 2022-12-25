@@ -1,4 +1,4 @@
-package com.mkkl;
+package com.mkkl.hantekapi;
 
 public enum Scopes {
     //TODO find ids

@@ -1,4 +1,4 @@
-package com.mkkl;
+package com.mkkl.hantekapi;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
