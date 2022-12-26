@@ -2,9 +2,7 @@ package com.mkkl.hantekapi;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HexFormat;
-import java.util.stream.Stream;
 
 public class FirmwareReader extends BufferedReader {
     public FirmwareReader(Reader in) {
@@ -36,7 +34,7 @@ public class FirmwareReader extends BufferedReader {
         } else throw new IllegalArgumentException("Unknown record type of " + type);
     }
 
-    public Firmware readFirmware() throws IOException {
+    public FirmwareControlPacket[] readFirmwareData() throws IOException {
         ArrayList<FirmwareControlPacket> recordLines = new ArrayList<FirmwareControlPacket>();
 
         recordLines.add(new FirmwareControlPacket((byte) 1, (short)0xe600, new byte[]{0x01}));
@@ -47,7 +45,7 @@ public class FirmwareReader extends BufferedReader {
 
         recordLines.add(new FirmwareControlPacket((byte) 1, (short)0xe600, new byte[]{0x00}));
 
-        return new Firmware(recordLines);
+        return recordLines.toArray(new FirmwareControlPacket[0]);
     }
 
     private static int sum(byte[] array) {

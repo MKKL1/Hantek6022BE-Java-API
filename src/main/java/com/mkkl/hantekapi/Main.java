@@ -12,19 +12,16 @@ import java.util.List;
 
 public class Main {
 
-    public static void main(String[] args) throws UnsupportedEncodingException, UsbException {
-//        try {
-//            FirmwareReader firmwareReader = new FirmwareReader(new FileReader("dso6022be-firmware.hex"));
-//            Firmware firmware = firmwareReader.readFirmware();
-//            System.out.println(Arrays.toString(firmware.firmwareData));
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+    public static void main(String[] args) throws UnsupportedEncodingException, UsbException, InterruptedException {
+//
 //
 //        System.out.println((byte)255);
         Oscilloscope oscilloscope = new Oscilloscope();
         oscilloscope.setup();
+        oscilloscope.open_handle();
         System.out.println(oscilloscope.getScopeDevice().getProductString());
+        oscilloscope.flash_firmware(Firmwares.dso6022be_firmware);
+        oscilloscope.close_handle();
 
     }
 }
