@@ -18,10 +18,12 @@ public class Main {
 //        System.out.println((byte)255);
         Oscilloscope oscilloscope = new Oscilloscope();
         oscilloscope.setup();
-        oscilloscope.open_handle();
-        System.out.println(oscilloscope.getScopeDevice().getProductString());
+//        oscilloscope.open_handle();
+//        System.out.println(oscilloscope.getScopeDevice().getProductString());
+//        System.out.println(Arrays.toString(oscilloscope.read_eeprom((short) 0x08, (short) 32)));
+//        System.out.println(Arrays.toString(oscilloscope.read_eeprom((short) 0x08, (short) 80)));
         oscilloscope.flash_firmware(Firmwares.dso6022be_firmware);
-        oscilloscope.close_handle();
+//        oscilloscope.close_handle();
 
     }
 }
