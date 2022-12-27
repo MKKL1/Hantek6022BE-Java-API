@@ -1,9 +1,10 @@
 package com.mkkl.hantekapi;
 
+import com.mkkl.hantekapi.constants.Scopes;
+
 import javax.usb.*;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 
 //Making sure if for some reason you have multiple oscilloscopes connected you can manage them all
 public class OscilloscopeManager {

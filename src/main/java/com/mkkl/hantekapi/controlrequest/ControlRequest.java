@@ -1,7 +1,8 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.controlrequest;
 
 import javax.usb.UsbControlIrp;
 import javax.usb.UsbDevice;
+import javax.usb.UsbException;
 
 public class ControlRequest {
     private final byte requestType;
@@ -39,10 +40,21 @@ public class ControlRequest {
         return data;
     }
 
-    public UsbControlIrp getUsbControlIrp(UsbDevice deivce) {
-        UsbControlIrp irp = deivce.createUsbControlIrp(requestType, address, wValue, wValue);
+    public UsbControlIrp getUsbControlIrp(UsbDevice device) {
+        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wValue);
         irp.setData(data);
         irp.setLength(data.length);
         return irp;
+    }
+
+    public void send(UsbDevice device) throws UsbException {
+        UsbControlIrp irp = getUsbControlIrp(device);
+        device.syncSubmit(irp);
+    }
+
+    public byte[] sendget(UsbDevice device) throws UsbException {
+        UsbControlIrp irp = getUsbControlIrp(device);
+        device.syncSubmit(irp);
+        return irp.getData();
     }
 }

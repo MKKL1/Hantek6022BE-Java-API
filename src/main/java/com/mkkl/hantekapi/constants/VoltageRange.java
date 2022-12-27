@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.constants;
 
 public enum VoltageRange {
     RANGE5000mV,

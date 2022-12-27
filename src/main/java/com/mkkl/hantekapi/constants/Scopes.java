@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.constants;
 
 import com.mkkl.hantekapi.firmware.Firmwares;
 

@@ -1,12 +1,16 @@
 package com.mkkl.hantekapi;
 
 import javax.usb.*;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 
 public class Oscilloscope {
     private final ScopeUsbConnection scopeUsbConnection;
     private final byte channelCount = 2;
     private ScopeChannel[] scopeChannels;
+
 
     private boolean firmwarePresent = false;
 
@@ -23,10 +27,14 @@ public class Oscilloscope {
         this.firmwarePresent = firmwarePresent;
     }
 
+    public void open() throws UsbException {
+        scopeUsbConnection.open();
+    }
 
-    public byte[] readCalibrationValues() throws UsbException {
-        byte[] standardcalibration = scopeUsbConnection.getEepromConnection().getStandardCalibration();
-        byte[] extendedcalibration = scopeUsbConnection.getEepromConnection().getExtendedCalibration();
+
+    public byte[] getCalibrationValues() throws UsbException {
+        byte[] standardcalibration = scopeUsbConnection.getStandardCalibration();
+        byte[] extendedcalibration = scopeUsbConnection.getExtendedCalibration();
 
         System.out.println(Arrays.toString(standardcalibration));
         System.out.println(Arrays.toString(extendedcalibration));
@@ -55,8 +63,20 @@ public class Oscilloscope {
         return standardcalibration;
     }
 
+    public InputStream channelinput() throws UsbException {
+        return scopeUsbConnection.readData((short) 0x400);
+    }
+
+    public void setCalibrationValues(byte[] calibrationvalues) throws UsbException {
+        scopeUsbConnection.setStandardCalibration(calibrationvalues);
+    }
+
     public UsbDevice getScopeDevice() {
         return scopeUsbConnection.getScopeDevice();
+    }
+
+    public ScopeUsbConnection getScopeUsbConnection() {
+        return scopeUsbConnection;
     }
 
     public ScopeChannel[] getChannels() {
@@ -69,5 +89,9 @@ public class Oscilloscope {
 
     public boolean isFirmwarePresent() {
         return firmwarePresent;
+    }
+
+    public void close() throws UsbException{
+        scopeUsbConnection.close();
     }
 }

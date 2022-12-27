@@ -1,7 +1,5 @@
 package com.mkkl.hantekapi.firmware;
 
-import com.mkkl.hantekapi.Scopes;
-
 public enum Firmwares {
     stock_firmware("stock_fw.ihex"),
     mod_firmware_01("mod_fw_01.ihex"),

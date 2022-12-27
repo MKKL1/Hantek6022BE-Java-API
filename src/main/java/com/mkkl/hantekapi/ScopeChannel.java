@@ -1,9 +1,8 @@
 package com.mkkl.hantekapi;
 
-import java.util.ArrayList;
+import com.mkkl.hantekapi.constants.VoltageRange;
+
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class ScopeChannel {
     public static final VoltageRange[] voltageRanges = {VoltageRange.RANGE5000mV,VoltageRange.RANGE2500mV,VoltageRange.RANGE1000mV,VoltageRange.RANGE250mV};
