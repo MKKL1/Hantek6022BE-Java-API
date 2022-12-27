@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.firmware;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -10,7 +10,6 @@ public class FirmwareReader extends BufferedReader {
     }
 
     /**
-     *
      * @return Returns FirmwareControlPacket on success or null on end of line
      * @throws IOException
      */

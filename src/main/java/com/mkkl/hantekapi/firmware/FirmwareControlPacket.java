@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.firmware;
 
 import java.util.Arrays;
 

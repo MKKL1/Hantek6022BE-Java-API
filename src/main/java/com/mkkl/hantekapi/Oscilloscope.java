@@ -1,129 +1,73 @@
 package com.mkkl.hantekapi;
 
 import javax.usb.*;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.List;
-import java.util.Optional;
+import java.util.Arrays;
 
 public class Oscilloscope {
+    private final ScopeUsbConnection scopeUsbConnection;
+    private final byte channelCount = 2;
+    private ScopeChannel[] scopeChannels;
 
-    private static final short FIRMWARE_VERSION = 0x0210;
-    private static final short NO_FIRMWARE_VENDOR_ID = 0x04B4;
-    private static final short FIRMWARE_PRESENT_VENDOR_ID = 0x04B5;
+    private boolean firmwarePresent = false;
 
-    private static final byte RW_FIRMWARE_REQUEST = (byte) 0xa0;
-    private static final byte RW_FIRMWARE_INDEX = (byte) 0x00;
-
-
-    private UsbDevice scopeDevice = null;
-    UsbInterface iface;
-    private boolean isFirmwarePresent = false;
-
-    public Oscilloscope() {
-
-    }
-
-    public void setup() throws UsbException, UsbScopeNotFoundException {
-        UsbHub rootUsbHub = UsbHostManager.getUsbServices().getRootUsbHub();
-        scopeDevice = findDevice(rootUsbHub);
-    }
-
-
-    private UsbDevice findDevice(UsbHub hub) throws UsbScopeNotFoundException {
-        List<UsbDevice> usbDevices = (List<UsbDevice>) hub.getAttachedUsbDevices();
-        //TODO search user defined devices
-//        usbDevices.stream().filter(x -> {
-//            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-//            return (desc.idVendor() != NO_FIRMWARE_VENDOR_ID && desc.idVendor() != FIRMWARE_PRESENT_VENDOR_ID) && desc.idProduct() == Scopes.DSO6022BE.getProductId();
-//        }).findFirst().get();
-//
-//        for(UsbDevice de : usbDevices) {
-//            UsbDeviceDescriptor desc = de.getUsbDeviceDescriptor();
-//            String name = "";
-//            try {
-//                name = de.getProductString();
-//            } catch (UsbException | UnsupportedEncodingException e) {
-//            }
-//        }
-//        System.out.println("");
-        for(Scopes scope : new Scopes[]{Scopes.DSO6022BE, Scopes.DSO6022BL, Scopes.DSO6021}) {
-            Optional<UsbDevice> device = usbDevices.stream().filter(x -> {
-                UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-                return (desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID || desc.idVendor() == NO_FIRMWARE_VENDOR_ID)&& desc.idProduct() == scope.getProductId();
-            }).findFirst();
-            if(device.isPresent()) return device.get();
+    public Oscilloscope(UsbDevice usbDevice) {
+        this.scopeUsbConnection = new ScopeUsbConnection(usbDevice);
+        scopeChannels = new ScopeChannel[channelCount];
+        for (int i = 0; i < channelCount; i++) {
+            scopeChannels[i] = new ScopeChannel((byte) i);
         }
-        throw new UsbScopeNotFoundException("Device couldn't be found");
-
     }
 
-    public void open_handle() throws UsbException {
-        if (scopeDevice == null) throw new RuntimeException("Device was not found, use Oscilloscope.setup()");
-
-        UsbConfiguration configuration = scopeDevice.getActiveUsbConfiguration();
-        iface = configuration.getUsbInterface((byte) 0);
-        iface.claim();
+    public Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
+        this(usbDevice);
+        this.firmwarePresent = firmwarePresent;
     }
 
-    public void close_handle() throws UsbException {
-        iface.release();
-    }
 
-    public byte[] read_eeprom(short offset, short length) throws UsbException {
-        UsbControlIrp irp = scopeDevice.createUsbControlIrp((byte) 64,(byte) 162,offset,(short) 0);
-        irp.setData(new byte[length]);
-        scopeDevice.syncSubmit(irp);
-        return irp.getData();
-    }
+    public byte[] readCalibrationValues() throws UsbException {
+        byte[] standardcalibration = scopeUsbConnection.getEepromConnection().getStandardCalibration();
+        byte[] extendedcalibration = scopeUsbConnection.getEepromConnection().getExtendedCalibration();
 
-    public boolean flash_firmware(Firmwares firmwares) throws InterruptedException {
-        FirmwareReader firmwareReader = null;
-        try {
-            InputStream firmwareInputStream = getClass().getClassLoader().getResourceAsStream(firmwares.getFilename());
-            if (firmwareInputStream == null) throw new IOException("Firmware given by filename " + firmwares.getFilename() + " not found");
-            firmwareReader = new FirmwareReader(new InputStreamReader(firmwareInputStream));
-            FirmwareControlPacket[] firmwareData = firmwareReader.readFirmwareData();
-
-            for(FirmwareControlPacket packet : firmwareData) {
-                UsbControlIrp irp = scopeDevice.createUsbControlIrp((byte) 64,(byte) 160,packet.value,RW_FIRMWARE_INDEX);
-
-                irp.setData(packet.data);
-                irp.setLength(packet.size);
-                scopeDevice.syncSubmit(irp);
+        System.out.println(Arrays.toString(standardcalibration));
+        System.out.println(Arrays.toString(extendedcalibration));
+        for(int j = 0; j < channelCount; j++) {
+            float[] calibration = new float[ScopeChannel.voltageRanges.length];
+            for (int i = 0; i < 4; i++) {
+                calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i]+j]-128;
+                byte extcal = extendedcalibration[48+ScopeChannel.calibrationOffsets[i]+j];
+                //TODO fix byte != 255
+                if (extcal != 0 && extcal != 255)
+                    calibration[i] = calibration[i] + (extcal - 128) / 250f;
             }
-        } catch (IOException | UsbException e) {
-            e.printStackTrace();
-            return false;
-        } finally {
-            if (firmwareReader != null) {
-                try {
-                    firmwareReader.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            getChannel(j).setOffsets(calibration);
         }
 
-        //TODO set timeout instead
-        //TODO Throw runtime exception when timed out
-        Thread.sleep(500);
-        int i = 0;
-        for (; i < 30; i++) {
-            try {
-                setup();
-                break;
-            } catch (UsbException e) {
-                Thread.sleep(100);
+        for(int j = 0; j < channelCount; j++) {
+            float[] gains = new float[ScopeChannel.voltageRanges.length];
+            for (int i = 0; i < 4; i++) {
+                byte extcal = extendedcalibration[32+ScopeChannel.calibrationGainOff[i]+j];
+                if (extcal != 0 && extcal != 255)
+                    gains[i] = gains[i] * (1 + (extcal - 128) / 500f);
             }
+            getChannel(j).setOffsets(gains);
         }
-        if (i == 30) return false;
-        return true;
 
+        return standardcalibration;
     }
 
     public UsbDevice getScopeDevice() {
-        return scopeDevice;
+        return scopeUsbConnection.getScopeDevice();
+    }
+
+    public ScopeChannel[] getChannels() {
+        return scopeChannels;
+    }
+
+    public ScopeChannel getChannel(int id) {
+        return scopeChannels[id];
+    }
+
+    public boolean isFirmwarePresent() {
+        return firmwarePresent;
     }
 }
