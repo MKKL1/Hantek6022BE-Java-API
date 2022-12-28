@@ -12,4 +12,7 @@ public class UsbConnectionConst {
     public static final short TRIGGER_VALUE = 0x00;
     public static final byte TRIGGER_INDEX = 0x00;
 
+    public static final byte BULK_ENDPOINT_ADDRESS = (byte) 0x86;
+    public static final byte ISO_ENDPOINT_ADDRESS = (byte) 0x82;
+
 }

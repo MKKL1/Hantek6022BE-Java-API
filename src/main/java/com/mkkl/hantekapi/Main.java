@@ -18,6 +18,7 @@ public class Main {
         System.out.println(oscilloscope.getScopeDevice().getProductString());
 
         if(!oscilloscope.isFirmwarePresent()) {
+            System.out.println("Flashing firmware");
             oscilloscope.getFirmwareUploader().flash_firmware();
             Thread.sleep(5000);
             OscilloscopeManager.findAllDevices();
@@ -28,12 +29,11 @@ public class Main {
         oscilloscope.getCalibrationValues();
 
         oscilloscope.open();
-        FormattedDataStream input = oscilloscope.getFormattedData();
+        FormattedDataStream input = oscilloscope.getFormattedData((short) 16);
         while(input.availableChannels() > 0) {
             System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
         }
-
-        oscilloscope.close();
+        oscilloscope.getScopeUsbConnection().getScopeInterface().getEndpoint().close();
 
     }
 }

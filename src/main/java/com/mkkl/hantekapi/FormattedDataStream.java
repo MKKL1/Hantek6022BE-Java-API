@@ -4,11 +4,12 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 
 import java.io.IOException;
+import java.io.PipedInputStream;
 
 public class FormattedDataStream extends AdcInputStream{
     private final ChannelManager channelManager;
-    public FormattedDataStream(byte[] data, ChannelManager channelManager) {
-        super(data, channelManager.getChannelCount());
+    public FormattedDataStream(PipedInputStream pipedInputStream, ChannelManager channelManager, int length) throws IOException {
+        super(pipedInputStream, channelManager.getChannelCount(), length);
         this.channelManager = channelManager;
     }
 
@@ -30,7 +31,7 @@ public class FormattedDataStream extends AdcInputStream{
      * @param channelId Id of channel to format with
      * @return Actual voltage on channel
      */
-    public float readFormatted(int channelId) {
+    public float readFormatted(int channelId) throws IOException {
         return channelManager.getChannel(channelId).formatData((byte) read());
     }
 
