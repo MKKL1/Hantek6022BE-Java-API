@@ -8,7 +8,15 @@ import java.io.InputStream;
 
 public class AdcInputStream extends ByteArrayInputStream {
 
-    public AdcInputStream(byte[] data) {
+    int channelcount = 0;
+    public AdcInputStream(byte[] data, int channelcount) {
         super(data);
+        this.channelcount = channelcount;
     }
+
+    public byte[] readChannels() throws IOException {
+        return readNBytes(channelcount);
+    }
+
+    public int availableChannels() {return available()/channelcount;}
 }

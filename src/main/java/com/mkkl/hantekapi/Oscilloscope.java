@@ -1,25 +1,21 @@
 package com.mkkl.hantekapi;
 
+import com.mkkl.hantekapi.channel.ChannelManager;
+import com.mkkl.hantekapi.channel.ScopeChannel;
+import com.mkkl.hantekapi.firmware.FirmwareUploader;
+
 import javax.usb.*;
-import java.io.Closeable;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
 public class Oscilloscope {
-    private final ScopeUsbConnection scopeUsbConnection;
-    private final byte channelCount = 2;
-    private ScopeChannel[] scopeChannels;
-
-
+    private final HantekConnection hantekConnection;
+    private final ChannelManager channelManager;
     private boolean firmwarePresent = false;
 
     public Oscilloscope(UsbDevice usbDevice) {
-        this.scopeUsbConnection = new ScopeUsbConnection(usbDevice);
-        scopeChannels = new ScopeChannel[channelCount];
-        for (int i = 0; i < channelCount; i++) {
-            scopeChannels[i] = new ScopeChannel((byte) i);
-        }
+        this.hantekConnection = new HantekConnection(usbDevice);
+        this.channelManager = new ChannelManager((byte) 2);
     }
 
     public Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
@@ -28,17 +24,18 @@ public class Oscilloscope {
     }
 
     public void open() throws UsbException {
-        scopeUsbConnection.open();
+        hantekConnection.open();
     }
 
+    public void close() throws UsbException {
+        hantekConnection.close();
+    }
 
     public byte[] getCalibrationValues() throws UsbException {
-        byte[] standardcalibration = scopeUsbConnection.getStandardCalibration();
-        byte[] extendedcalibration = scopeUsbConnection.getExtendedCalibration();
+        byte[] standardcalibration = hantekConnection.getStandardCalibration();
+        byte[] extendedcalibration = hantekConnection.getExtendedCalibration();
 
-        System.out.println(Arrays.toString(standardcalibration));
-        System.out.println(Arrays.toString(extendedcalibration));
-        for(int j = 0; j < channelCount; j++) {
+        for(int j = 0; j < channelManager.getChannelCount(); j++) {
             float[] calibration = new float[ScopeChannel.voltageRanges.length];
             for (int i = 0; i < 4; i++) {
                 calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i]+j]-128;
@@ -47,51 +44,55 @@ public class Oscilloscope {
                 if (extcal != 0 && extcal != 255)
                     calibration[i] = calibration[i] + (extcal - 128) / 250f;
             }
-            getChannel(j).setOffsets(calibration);
-        }
+            channelManager.getChannel(j).setOffsets(calibration);
 
-        for(int j = 0; j < channelCount; j++) {
             float[] gains = new float[ScopeChannel.voltageRanges.length];
             for (int i = 0; i < 4; i++) {
                 byte extcal = extendedcalibration[32+ScopeChannel.calibrationGainOff[i]+j];
                 if (extcal != 0 && extcal != 255)
                     gains[i] = gains[i] * (1 + (extcal - 128) / 500f);
             }
-            getChannel(j).setOffsets(gains);
+            channelManager.getChannel(j).setOffsets(gains);
         }
 
         return standardcalibration;
     }
 
-    public InputStream channelinput() throws UsbException {
-        return scopeUsbConnection.readData((short) 0x400);
+    public AdcInputStream getData() throws UsbException {
+        return getData((short) 0x400);
+    }
+
+    public AdcInputStream getData(short size) throws UsbException {
+        return new AdcInputStream(hantekConnection.readRawData(size), channelManager.getChannelCount());
+    }
+
+    public FormattedDataStream getFormattedData() throws UsbException {
+        return getFormattedData((short) 0x400);
+    }
+
+    public FormattedDataStream getFormattedData(short size) throws UsbException {
+        return new FormattedDataStream(hantekConnection.readRawData(size), channelManager);
     }
 
     public void setCalibrationValues(byte[] calibrationvalues) throws UsbException {
-        scopeUsbConnection.setStandardCalibration(calibrationvalues);
+        hantekConnection.setStandardCalibration(calibrationvalues);
     }
 
     public UsbDevice getScopeDevice() {
-        return scopeUsbConnection.getScopeDevice();
+        return hantekConnection.getScopeDevice();
     }
 
-    public ScopeUsbConnection getScopeUsbConnection() {
-        return scopeUsbConnection;
+    public HantekConnection getScopeUsbConnection() {
+        return hantekConnection;
     }
 
-    public ScopeChannel[] getChannels() {
-        return scopeChannels;
-    }
-
-    public ScopeChannel getChannel(int id) {
-        return scopeChannels[id];
+    public FirmwareUploader getFirmwareUploader() {
+        return hantekConnection.getFirmwareUploader();
     }
 
     public boolean isFirmwarePresent() {
         return firmwarePresent;
     }
 
-    public void close() throws UsbException{
-        scopeUsbConnection.close();
-    }
+
 }

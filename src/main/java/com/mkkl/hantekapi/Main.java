@@ -17,21 +17,20 @@ public class Main {
 
         System.out.println(oscilloscope.getScopeDevice().getProductString());
 
-        oscilloscope.getScopeUsbConnection().flash_firmware(Scopes.DSO6022BE);
+        if(!oscilloscope.isFirmwarePresent()) {
+            oscilloscope.getFirmwareUploader().flash_firmware();
+            Thread.sleep(5000);
+            OscilloscopeManager.findAllDevices();
+            oscilloscope = OscilloscopeManager.getFirstFound();
+            System.out.println(oscilloscope.getScopeDevice().getProductString());
+        }
 
-        Thread.sleep(5000);
-        OscilloscopeManager.findAllDevices();
-        oscilloscope = OscilloscopeManager.getFirstFound();
-
-
-        System.out.println(oscilloscope.getScopeDevice().getProductString());
         oscilloscope.getCalibrationValues();
 
         oscilloscope.open();
-
-        InputStream input = oscilloscope.channelinput();
-        while(input.available() > 0) {
-            System.out.print((input.read()&0xFF) + ",");
+        FormattedDataStream input = oscilloscope.getFormattedData();
+        while(input.availableChannels() > 0) {
+            System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
         }
 
         oscilloscope.close();

@@ -59,6 +59,7 @@ public class OscilloscopeManager {
         return connections;
     }
 
+    //TODO throw ScopeNotFoundExc
     public static Oscilloscope getFirstOscilloscope(Scopes scope) throws UsbException {
         return getOscilloscope(scope)
                 .entrySet()
@@ -69,6 +70,7 @@ public class OscilloscopeManager {
                 .getValue();
     }
 
+    //TODO throw ScopeNotFoundExc
     public static Oscilloscope getFirstFound() {
         return connections.entrySet().stream().findFirst().orElseThrow().getValue();
     }
