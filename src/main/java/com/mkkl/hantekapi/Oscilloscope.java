@@ -1,18 +1,16 @@
 package com.mkkl.hantekapi;
 
+import com.mkkl.hantekapi.adcdata.AdcInputStream;
+import com.mkkl.hantekapi.adcdata.FormattedDataStream;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
-import com.mkkl.hantekapi.controlrequest.ControlRequest;
+import com.mkkl.hantekapi.constants.VoltageRange;
 import com.mkkl.hantekapi.controlrequest.ScopeControlRequest;
 import com.mkkl.hantekapi.endpoints.ScopeInterfaces;
 import com.mkkl.hantekapi.firmware.FirmwareUploader;
 
 import javax.usb.*;
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.util.Arrays;
 
 public class Oscilloscope implements AutoCloseable{
     private final HantekConnection hantekConnection;
@@ -21,7 +19,7 @@ public class Oscilloscope implements AutoCloseable{
 
     public Oscilloscope(UsbDevice usbDevice) {
         this.hantekConnection = new HantekConnection(usbDevice);
-        this.channelManager = new ChannelManager((byte) 2);
+        this.channelManager = new ChannelManager(2);
     }
 
     public Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
@@ -48,7 +46,7 @@ public class Oscilloscope implements AutoCloseable{
         byte[] extendedcalibration = hantekConnection.getExtendedCalibration();
 
         for(int j = 0; j < channelManager.getChannelCount(); j++) {
-            float[] calibration = new float[ScopeChannel.voltageRanges.length];
+            float[] calibration = new float[VoltageRange.values().length];
             for (int i = 0; i < 4; i++) {
                 calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i]+j]-128;
                 byte extcal = extendedcalibration[48+ScopeChannel.calibrationOffsets[i]+j];
@@ -58,7 +56,7 @@ public class Oscilloscope implements AutoCloseable{
             }
             channelManager.getChannel(j).setOffsets(calibration);
 
-            float[] gains = new float[ScopeChannel.voltageRanges.length];
+            float[] gains = new float[VoltageRange.values().length];
             for (int i = 0; i < 4; i++) {
                 byte extcal = extendedcalibration[32+ScopeChannel.calibrationGainOff[i]+j];
                 if (extcal != 0 && extcal != (byte)255)
@@ -112,6 +110,18 @@ public class Oscilloscope implements AutoCloseable{
 
     public FirmwareUploader getFirmwareUploader() {
         return hantekConnection.getFirmwareUploader();
+    }
+
+    public ScopeChannel getChannel(int id) {
+        return channelManager.getChannel(id);
+    }
+
+    public ScopeChannel[] getChannels() {
+        return channelManager.getChannels();
+    }
+
+    public ChannelManager getChannelManager() {
+        return channelManager;
     }
 
     public boolean isFirmwarePresent() {

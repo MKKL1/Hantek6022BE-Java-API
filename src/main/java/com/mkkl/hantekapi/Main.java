@@ -1,13 +1,11 @@
 package com.mkkl.hantekapi;
 
-import com.mkkl.hantekapi.constants.Scopes;
-import com.mkkl.hantekapi.firmware.Firmwares;
+import com.mkkl.hantekapi.adcdata.FormattedDataStream;
+import com.mkkl.hantekapi.channel.ScopeChannel;
 
-import javax.usb.UsbDevice;
 import javax.usb.UsbException;
 import java.io.*;
 import java.util.Arrays;
-import java.util.HashMap;
 
 public class Main {
 
@@ -29,7 +27,9 @@ public class Main {
         oscilloscope.getCalibrationValues();
 
         oscilloscope.open();
-        FormattedDataStream input = oscilloscope.getFormattedData((short) 16);
+        oscilloscope.getChannel(0).setActive();
+        oscilloscope.getChannel(1).setActive();
+        FormattedDataStream input = oscilloscope.getFormattedData();
         while(input.availableChannels() > 0) {
             System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
         }

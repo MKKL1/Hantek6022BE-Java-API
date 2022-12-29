@@ -1,15 +1,17 @@
 package com.mkkl.hantekapi.channel;
 
+import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import java.util.HashMap;
 
+
 public class ScopeChannel {
-    public static final VoltageRange[] voltageRanges = {VoltageRange.RANGE5000mV,VoltageRange.RANGE2500mV,VoltageRange.RANGE1000mV,VoltageRange.RANGE250mV};
+    private static final VoltageRange[] voltageRanges = VoltageRange.values();
     public static final byte[] calibrationOffsets = {0, 6, 8, 14};
     public static final byte[] calibrationGainOff = {0, 4, 8, 14};
 
-    public final byte id;
+    private final int id;
     private final HashMap<VoltageRange, Float> offsets = new HashMap<>();
     private final HashMap<VoltageRange, Float> gains;
 
@@ -25,7 +27,7 @@ public class ScopeChannel {
 
     public float currentData;
 
-    public ScopeChannel(byte id) {
+    public ScopeChannel(int id) {
         this.id = id;
         for(VoltageRange range : voltageRanges) offsets.put(range, 0f);
         gains = new HashMap<>(){{
@@ -59,12 +61,20 @@ public class ScopeChannel {
         return ((rawdata&0xFF) - (_offset + additionalOffset)) * scale_factor;
     }
 
+    public int getId() {
+        return id;
+    }
+
     public HashMap<VoltageRange, Float> getOffsets() {
         return offsets;
     }
 
     public HashMap<VoltageRange, Float> getGains() {
         return gains;
+    }
+
+    public void setActive() {
+        this.active = true;
     }
 
     public void setActive(boolean state) {
