@@ -2,8 +2,10 @@ package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.adcdata.FormattedDataStream;
+import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
+import com.mkkl.hantekapi.channel.VoltageRangeChange;
 import com.mkkl.hantekapi.communication.HantekConnection;
 import com.mkkl.hantekapi.constants.VoltageRange;
 import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
@@ -12,21 +14,31 @@ import com.mkkl.hantekapi.communication.interfaces.ScopeInterfaces;
 import javax.usb.*;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.HexFormat;
 
 public class Oscilloscope implements AutoCloseable{
     private final HantekConnection hantekConnection;
-    private final ChannelManager channelManager;
+    private ChannelManager channelManager;
     private boolean firmwarePresent = false;
 
     public Oscilloscope(UsbDevice usbDevice) {
         this.hantekConnection = new HantekConnection(usbDevice);
-        this.channelManager = new ChannelManager(2);
     }
 
     public Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
         this(usbDevice);
         this.firmwarePresent = firmwarePresent;
+    }
+
+    public void setup() throws UsbException {
+        this.channelManager = new ChannelManager(2, (newVoltageRange, channelid) ->
+        {
+            System.out.println("sending " + newVoltageRange + " " + channelid);
+            if(channelid == 0) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).send(getScopeDevice());
+            else if(channelid == 1) ScopeControlRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).send(getScopeDevice());
+            else throw new RuntimeException("Unknown channel id of " + channelid + "(" + channelid + 1 + ")");
+        });
     }
 
     public void open() throws UsbException {
@@ -43,16 +55,29 @@ public class Oscilloscope implements AutoCloseable{
         hantekConnection.close();
     }
 
+    public void setActive(ActiveChannels activeChannels) throws UsbException {
+        channelManager.setActiveChannelCount(activeChannels.getActiveCount());
+        ScopeControlRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).send(hantekConnection.getScopeDevice());
+    }
+
     public byte[] getCalibrationValues() throws UsbException {
         byte[] standardcalibration = hantekConnection.getStandardCalibration();
         byte[] extendedcalibration = hantekConnection.getExtendedCalibration();
+        System.out.println(Arrays.toString(standardcalibration));
+        System.out.println(Arrays.toString(extendedcalibration));
+
+        for(int j = 0; j < channelManager.getChannelCount(); j++) {
+            float[] calibration = new float[VoltageRange.values().length];
+            for (int i = 0; i < 4; i++)
+                calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i] + j] - 128;
+            channelManager.getChannel(j).setOffsets(calibration);
+        }
 
         for(int j = 0; j < channelManager.getChannelCount(); j++) {
             float[] calibration = new float[VoltageRange.values().length];
             for (int i = 0; i < 4; i++) {
                 calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i]+j]-128;
                 byte extcal = extendedcalibration[48+ScopeChannel.calibrationOffsets[i]+j];
-                //TODO fix byte != 255
                 if (extcal != (byte)0 && extcal != (byte)255)
                     calibration[i] = calibration[i] + (extcal - 128) / 250f;
             }
@@ -68,6 +93,10 @@ public class Oscilloscope implements AutoCloseable{
         }
 
         return standardcalibration;
+    }
+
+    public void setCalibrationValues(byte[] calibrationvalues) throws UsbException {
+        hantekConnection.setStandardCalibration(calibrationvalues);
     }
 
     public AdcInputStream getData() throws UsbException, IOException {
@@ -98,10 +127,6 @@ public class Oscilloscope implements AutoCloseable{
         return formattedDataStream;
     }
 
-    public void setCalibrationValues(byte[] calibrationvalues) throws UsbException {
-        hantekConnection.setStandardCalibration(calibrationvalues);
-    }
-
     public UsbDevice getScopeDevice() {
         return hantekConnection.getScopeDevice();
     }
@@ -128,6 +153,17 @@ public class Oscilloscope implements AutoCloseable{
 
     @Override
     public String toString() {
+        String s = "Oscilloscope ";
+        UsbDevice usbDevice = getScopeDevice();
+        try {
+            s += usbDevice.getProductString();
+        } catch (UsbException | UnsupportedEncodingException e) {
+            s += "UNKNOWN_PRODUCT_STRING";
+        }
+        return s;
+    }
+
+    public String getDescriptor() {
         String s = "Oscilloscope ";
         UsbDevice usbDevice = getScopeDevice();
         try {

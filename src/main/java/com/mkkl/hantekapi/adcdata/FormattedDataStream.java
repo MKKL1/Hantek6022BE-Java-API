@@ -12,8 +12,8 @@ import java.io.PipedInputStream;
  */
 public class FormattedDataStream extends AdcInputStream {
     private final ChannelManager channelManager;
-    private final ScopeChannel[] activeChannels;
-    //getActiveChannelCount can be length of getActiveChannels, but it doesn't really matter performance wise
+    private final int activeChannelCount;
+    private final ScopeChannel[] channels;
 
     /**
      * @param pipedInputStream input stream from usb endpoint
@@ -23,7 +23,8 @@ public class FormattedDataStream extends AdcInputStream {
     public FormattedDataStream(PipedInputStream pipedInputStream, ChannelManager channelManager, int length) {
         super(pipedInputStream, channelManager.getActiveChannelCount(), length);
         this.channelManager = channelManager;
-        activeChannels = channelManager.getActiveChannels();
+        activeChannelCount = channelManager.getActiveChannelCount();
+        channels = channelManager.getChannels();
     }
 
     /**
@@ -50,8 +51,8 @@ public class FormattedDataStream extends AdcInputStream {
      */
     public void readToChannels() throws IOException {
         byte[] bytes = readChannels();
-        for (int i = 0; i < channelcount; i++) {
-            activeChannels[i].currentData = activeChannels[i].formatData(bytes[i]);
+        for (int i = 0; i < activeChannelCount; i++) {
+            channels[i].currentData = channels[i].formatData(bytes[i]);
         }
     }
 
@@ -63,7 +64,7 @@ public class FormattedDataStream extends AdcInputStream {
         byte[] bytes = readChannels();
         float[] formatteddata = new float[bytes.length];
         for (int i = 0; i < bytes.length; i++) {
-            formatteddata[i] = activeChannels[i].formatData(bytes[i]);
+            formatteddata[i] = channels[i].formatData(bytes[i]);
         }
         return formatteddata;
     }

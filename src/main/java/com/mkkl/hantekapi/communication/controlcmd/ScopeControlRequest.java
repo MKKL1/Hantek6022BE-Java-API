@@ -34,4 +34,31 @@ public class ScopeControlRequest extends ControlRequest{
                 UsbConnectionConst.RW_EEPROM_INDEX,
                 new byte[] {(byte) 0x00});
     }
+
+    public static ScopeControlRequest getChangeChCountRequest(byte count) {
+        return new ScopeControlRequest(
+                (byte) 0x40,
+                UsbConnectionConst.SET_NUMCH_REQUEST,
+                UsbConnectionConst.SET_NUMCH_VALUE,
+                UsbConnectionConst.SET_NUMCH_INDEX,
+                new byte[] {count});
+    }
+
+    public static ScopeControlRequest getVoltRangeCH1Request(byte range_index) {
+        return new ScopeControlRequest(
+                (byte) 0x40,
+                UsbConnectionConst.SET_CH1_VR_REQUEST,
+                UsbConnectionConst.SET_CH_VR_VALUE,
+                UsbConnectionConst.SET_CH_VR_INDEX,
+                new byte[] {range_index});
+    }
+
+    public static ScopeControlRequest getVoltRangeCH2Request(byte range_index) {
+        return new ScopeControlRequest(
+                (byte) 0x40,
+                UsbConnectionConst.SET_CH2_VR_REQUEST,
+                UsbConnectionConst.SET_CH_VR_VALUE,
+                UsbConnectionConst.SET_CH_VR_INDEX,
+                new byte[] {range_index});
+    }
 }

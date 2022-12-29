@@ -3,6 +3,7 @@ package com.mkkl.hantekapi.channel;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
+import javax.usb.UsbException;
 import java.util.HashMap;
 
 
@@ -14,20 +15,25 @@ public class ScopeChannel {
     private final int id;
     private final HashMap<VoltageRange, Float> offsets = new HashMap<>();
     private final HashMap<VoltageRange, Float> gains;
+    private VoltageRangeChange voltageRangeChangeEvent = null;
 
     //Save data from hashmap to variable each time a voltage range is changed
     private float _offset;
     private float _gain;
     private float scale_factor = 1;
 
-    private boolean active;
     private VoltageRange currentVoltageRange;
     private int probeMultiplier = 1;
     private float additionalOffset = 0;
 
     public float currentData;
 
-    public ScopeChannel(int id) {
+    public ScopeChannel(int id, VoltageRangeChange voltageRangeChangeEvent) throws UsbException {
+        this(id);
+        this.voltageRangeChangeEvent = voltageRangeChangeEvent;
+    }
+
+    public ScopeChannel(int id) throws UsbException {
         this.id = id;
         for(VoltageRange range : voltageRanges) offsets.put(range, 0f);
         gains = new HashMap<>(){{
@@ -38,8 +44,6 @@ public class ScopeChannel {
 
         setVoltageRange(VoltageRange.RANGE5000mV);
     }
-
-
 
     public void setOffsets(float[] newoffsets) {
         for (int i = 0; i < newoffsets.length; i++) {
@@ -73,23 +77,12 @@ public class ScopeChannel {
         return gains;
     }
 
-    public void setActive() {
-        this.active = true;
-    }
-
-    public void setActive(boolean state) {
-        this.active = state;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setVoltageRange(VoltageRange currentVoltageRange) {
+    public void setVoltageRange(VoltageRange currentVoltageRange) throws UsbException {
         this.currentVoltageRange = currentVoltageRange;
         _offset = offsets.get(currentVoltageRange);
         _gain = gains.get(currentVoltageRange);
         recalculate_scalefactor();
+        if(voltageRangeChangeEvent != null) voltageRangeChangeEvent.onVoltageChange(currentVoltageRange, id);
     }
 
     public VoltageRange getVoltageRange() {
