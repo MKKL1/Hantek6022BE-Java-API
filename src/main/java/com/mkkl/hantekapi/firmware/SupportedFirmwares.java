@@ -1,6 +1,6 @@
 package com.mkkl.hantekapi.firmware;
 
-public enum Firmwares {
+public enum SupportedFirmwares {
     stock_firmware("stock_fw.ihex"),
     mod_firmware_01("mod_fw_01.ihex"),
     mod_firmware_iso("mod_fw_iso.ihex"),
@@ -11,7 +11,7 @@ public enum Firmwares {
 
     private String filename;
 
-    Firmwares(String filename) {
+    SupportedFirmwares(String filename) {
         this.filename = filename;
     }
 

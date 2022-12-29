@@ -1,5 +1,7 @@
-package com.mkkl.hantekapi.controlrequest;
+package com.mkkl.hantekapi.communication.controlcmd;
 
+
+import com.mkkl.hantekapi.communication.UsbConnectionConst;
 
 public class ScopeControlRequest extends ControlRequest{
 

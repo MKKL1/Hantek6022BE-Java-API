@@ -20,23 +20,25 @@ public class OscilloscopeManager {
         UsbHub rootUsbHub = UsbHostManager.getUsbServices().getRootUsbHub();
         List<UsbDevice> usbDevices = (List<UsbDevice>) rootUsbHub.getAttachedUsbDevices();
 
-        usbDevices.stream().filter(x -> {
-            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-            return desc.idVendor() != FIRMWARE_PRESENT_VENDOR_ID && desc.idVendor() != NO_FIRMWARE_VENDOR_ID &&
-                    (desc.idProduct() == Scopes.DSO6022BE.getProductId() ||
-                            desc.idProduct() == Scopes.DSO6022BL.getProductId() ||
-                            desc.idProduct() == Scopes.DSO6021.getProductId());
-        }).forEach(x -> {
-            Oscilloscope oscilloscope = new Oscilloscope(x, false);
-            connections.put(x, oscilloscope);
-        });
+//        usbDevices.stream().filter(x -> {
+//            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
+//            return desc.idVendor() != FIRMWARE_PRESENT_VENDOR_ID && desc.idVendor() != NO_FIRMWARE_VENDOR_ID &&
+//                    (desc.idProduct() != Scopes.DSO6022BE.getProductId() ||
+//                            desc.idProduct() != Scopes.DSO6022BL.getProductId() ||
+//                            desc.idProduct() != Scopes.DSO6021.getProductId());
+//        }).forEach(x -> {
+//            Oscilloscope oscilloscope = new Oscilloscope(x, false);
+//            connections.put(x, oscilloscope);
+//        });
 
         for(Scopes scope : new Scopes[]{Scopes.DSO6022BE, Scopes.DSO6022BL, Scopes.DSO6021}) {
             usbDevices.stream().filter(x -> {
                 UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
                 return (desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID || desc.idVendor() == NO_FIRMWARE_VENDOR_ID)&& desc.idProduct() == scope.getProductId();
             }).forEach(x -> {
-                Oscilloscope oscilloscope = new Oscilloscope(x, true);
+                UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
+                boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdDevice() == FIRMWARE_VERSION;
+                Oscilloscope oscilloscope = new Oscilloscope(x, isFirmwarePresent);
                 connections.put(x, oscilloscope);
             });
         }
@@ -53,7 +55,9 @@ public class OscilloscopeManager {
             return desc.idVendor() != FIRMWARE_PRESENT_VENDOR_ID && desc.idVendor() != NO_FIRMWARE_VENDOR_ID &&
                     (desc.idProduct() == scope.getProductId());
         }).forEach(x -> {
-            Oscilloscope oscilloscope = new Oscilloscope(x, false);
+            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
+            boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdUSB() == FIRMWARE_VERSION;
+            Oscilloscope oscilloscope = new Oscilloscope(x, isFirmwarePresent);
             connections.put(x, oscilloscope);
         });
         return connections;

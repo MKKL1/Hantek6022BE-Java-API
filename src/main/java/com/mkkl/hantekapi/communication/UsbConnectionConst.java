@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi.controlrequest;
+package com.mkkl.hantekapi.communication;
 
 public class UsbConnectionConst {
     public static final byte RW_EEPROM_REQUEST = (byte) 0xa2;

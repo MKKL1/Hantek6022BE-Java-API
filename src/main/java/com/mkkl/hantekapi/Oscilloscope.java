@@ -4,13 +4,15 @@ import com.mkkl.hantekapi.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.adcdata.FormattedDataStream;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
+import com.mkkl.hantekapi.communication.HantekConnection;
 import com.mkkl.hantekapi.constants.VoltageRange;
-import com.mkkl.hantekapi.controlrequest.ScopeControlRequest;
-import com.mkkl.hantekapi.endpoints.ScopeInterfaces;
-import com.mkkl.hantekapi.firmware.FirmwareUploader;
+import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
+import com.mkkl.hantekapi.communication.interfaces.ScopeInterfaces;
 
 import javax.usb.*;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.HexFormat;
 
 public class Oscilloscope implements AutoCloseable{
     private final HantekConnection hantekConnection;
@@ -104,12 +106,8 @@ public class Oscilloscope implements AutoCloseable{
         return hantekConnection.getScopeDevice();
     }
 
-    public HantekConnection getScopeUsbConnection() {
+    public HantekConnection getHantekConnection() {
         return hantekConnection;
-    }
-
-    public FirmwareUploader getFirmwareUploader() {
-        return hantekConnection.getFirmwareUploader();
     }
 
     public ScopeChannel getChannel(int id) {
@@ -128,5 +126,31 @@ public class Oscilloscope implements AutoCloseable{
         return firmwarePresent;
     }
 
-
+    @Override
+    public String toString() {
+        String s = "Oscilloscope ";
+        UsbDevice usbDevice = getScopeDevice();
+        try {
+            s += usbDevice.getProductString() + System.lineSeparator();
+        } catch (UsbException | UnsupportedEncodingException e) {
+            s += "UNKNOWN_PRODUCT_STRING"+ System.lineSeparator();
+        }
+        UsbDeviceDescriptor usbDeviceDescriptor = usbDevice.getUsbDeviceDescriptor();
+        s += " idProduct=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.idProduct()) + System.lineSeparator();
+        s += " idVendor=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.idVendor()) + System.lineSeparator();
+        s += " bcdDevice=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.bcdDevice()) + System.lineSeparator();
+        s += " isFirmwarePresent=" + isFirmwarePresent() + System.lineSeparator();
+        s += " interfaces=" + usbDevice.getActiveUsbConfiguration().getUsbInterfaces().toString() + System.lineSeparator();
+        try {
+            s += " manufacturer=" + usbDevice.getManufacturerString() + System.lineSeparator();
+        } catch (UsbException | UnsupportedEncodingException e) {
+            s += " manufacturer=UNKNOWN" + System.lineSeparator();
+        }
+        try {
+            s += " serial=" + usbDevice.getSerialNumberString() + System.lineSeparator();
+        } catch (UsbException | UnsupportedEncodingException e) {
+            s += " serial=UNKNOWN" + System.lineSeparator();
+        }
+        return s;
+    }
 }

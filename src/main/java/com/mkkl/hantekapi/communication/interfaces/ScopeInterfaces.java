@@ -1,4 +1,6 @@
-package com.mkkl.hantekapi.endpoints;
+package com.mkkl.hantekapi.communication.interfaces;
+
+import com.mkkl.hantekapi.communication.interfaces.endpoints.EndpointTypes;
 
 public enum ScopeInterfaces {
     BulkTransfer((byte)0, EndpointTypes.Bulk),

@@ -1,4 +1,8 @@
-package com.mkkl.hantekapi.endpoints;
+package com.mkkl.hantekapi.communication.interfaces;
+
+import com.mkkl.hantekapi.communication.interfaces.endpoints.BulkEndpoint;
+import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
+import com.mkkl.hantekapi.communication.interfaces.endpoints.EndpointTypes;
 
 import javax.usb.UsbDevice;
 import javax.usb.UsbException;

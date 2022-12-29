@@ -4,18 +4,21 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HexFormat;
 
-public class FirmwareReader extends BufferedReader {
-    public FirmwareReader(Reader in) {
-        super(in);
+//It could also be intel hex file reader
+public class FirmwareReader extends Reader {
+    private BufferedReader bufferedReader;
+
+    public FirmwareReader(BufferedReader bufferedReader) {
+        this.bufferedReader = bufferedReader;
     }
 
     /**
+     * Reads and parses line of hex file to {@link FirmwareControlPacket}
      * @return Returns FirmwareControlPacket on success or null on end of line
-     * @throws IOException
      */
     public FirmwareControlPacket readRecordLine() throws IOException {
-        String line = readLine().strip();
-        if (!line.startsWith(":")) throw new IllegalArgumentException("Line doesn't start with ':'");
+        String line = bufferedReader.readLine().strip();
+        if (!line.startsWith(":")) throw new IOException("Line doesn't start with ':'");
         DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(HexFormat.of().parseHex(line.substring(1))));
 
         byte size = dataInputStream.readByte();
@@ -25,25 +28,25 @@ public class FirmwareReader extends BufferedReader {
         byte file_checksum = dataInputStream.readByte();
         if (type == 0x00) {
             byte checksum = (byte) ((sum(data) + size + (address%256) +  (address >> 8)) % 256);
-            if ((((checksum + file_checksum) % 256 ) & 0xFF) != 0) throw new IllegalArgumentException("Invalid checksum");
+            if ((((checksum + file_checksum) % 256 ) & 0xFF) != 0) throw new IOException("Invalid checksum");
             return new FirmwareControlPacket(size, address, data);
         } else if (type == 0x01) {
-            if (file_checksum != (byte)0xFF) throw new IllegalArgumentException("Invalid checksum for record of type 0x01");
+            if (file_checksum != (byte)0xFF) throw new IOException("Invalid checksum for record of type 0x01");
             return null;
-        } else throw new IllegalArgumentException("Unknown record type of " + type);
+        } else throw new IOException("Unknown record type of " + type);
     }
 
-    public FirmwareControlPacket[] readFirmwareData() throws IOException {
+    /**
+     * Reads entire file
+     * @return array of all packets read from file
+     * @throws IOException
+     */
+    public FirmwareControlPacket[] readAll() throws IOException {
         ArrayList<FirmwareControlPacket> recordLines = new ArrayList<FirmwareControlPacket>();
-
-        recordLines.add(new FirmwareControlPacket((byte) 1, (short)0xe600, new byte[]{0x01}));
         FirmwareControlPacket recordLine;
         while((recordLine = readRecordLine()) != null) {
             recordLines.add(recordLine);
         }
-
-        recordLines.add(new FirmwareControlPacket((byte) 1, (short)0xe600, new byte[]{0x00}));
-
         return recordLines.toArray(new FirmwareControlPacket[0]);
     }
 
@@ -53,5 +56,15 @@ public class FirmwareReader extends BufferedReader {
             result += v;
         }
         return result;
+    }
+
+    @Override
+    public int read(char[] cbuf, int off, int len) throws IOException {
+        return bufferedReader.read();
+    }
+
+    @Override
+    public void close() throws IOException {
+        bufferedReader.close();
     }
 }

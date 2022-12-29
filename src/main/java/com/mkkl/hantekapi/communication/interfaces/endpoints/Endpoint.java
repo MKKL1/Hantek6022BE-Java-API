@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi.endpoints;
+package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
 import javax.usb.*;
 import javax.usb.event.UsbPipeDataEvent;
