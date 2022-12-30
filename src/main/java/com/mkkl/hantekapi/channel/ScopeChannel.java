@@ -73,6 +73,10 @@ public class ScopeChannel {
         return id;
     }
 
+    public int getChannelNumber() {
+        return id+1;
+    }
+
     public HashMap<VoltageRange, Float> getOffsets() {
         return offsets;
     }
@@ -81,14 +85,14 @@ public class ScopeChannel {
         return gains;
     }
 
+    public VoltageRange getVoltageRange() {
+        return currentVoltageRange;
+    }
+
     public void setVoltageRange(VoltageRange currentVoltageRange) throws UsbException {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
         if(voltageRangeChangeEvent != null) voltageRangeChangeEvent.onVoltageChange(currentVoltageRange, id);
-    }
-
-    public VoltageRange getVoltageRange() {
-        return currentVoltageRange;
     }
 
     public int getProbeMultiplier() {

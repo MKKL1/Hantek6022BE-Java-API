@@ -9,7 +9,7 @@ public enum SupportedFirmwares {
     dso6022bl_firmware("dso6022bl-firmware.hex"),
     dds120_firmware("dds120-firmware.hex");
 
-    private String filename;
+    private final String filename;
 
     SupportedFirmwares(String filename) {
         this.filename = filename;

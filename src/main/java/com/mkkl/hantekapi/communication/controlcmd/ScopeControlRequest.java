@@ -26,7 +26,7 @@ public class ScopeControlRequest extends ControlRequest{
                 (byte) 0x40,
                 UsbConnectionConst.TRIGGER_REQUEST,
                 UsbConnectionConst.TRIGGER_VALUE,
-                UsbConnectionConst.RW_EEPROM_INDEX,
+                UsbConnectionConst.TRIGGER_INDEX,
                 new byte[] {(byte) 0x01});
     }
 
@@ -35,7 +35,7 @@ public class ScopeControlRequest extends ControlRequest{
                 (byte) 0x40,
                 UsbConnectionConst.TRIGGER_REQUEST,
                 UsbConnectionConst.TRIGGER_VALUE,
-                UsbConnectionConst.RW_EEPROM_INDEX,
+                UsbConnectionConst.TRIGGER_INDEX,
                 new byte[] {(byte) 0x00});
     }
 
@@ -64,5 +64,13 @@ public class ScopeControlRequest extends ControlRequest{
                 UsbConnectionConst.SET_CH_VR_VALUE,
                 UsbConnectionConst.SET_CH_VR_INDEX,
                 new byte[] {range_index});
+    }
+
+    public static ScopeControlRequest getSampleRateSetRequest(byte sample_rate_index) {
+        return new ScopeControlRequest((byte) 0x40,
+                UsbConnectionConst.SET_SAMPLE_RATE_REQUEST,
+                UsbConnectionConst.SET_SAMPLE_RATE_VALUE,
+                UsbConnectionConst.SET_SAMPLE_RATE_INDEX,
+                new byte[] {sample_rate_index});
     }
 }

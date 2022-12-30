@@ -49,14 +49,12 @@ public class ControlRequest {
     }
 
     public void write(UsbDevice device) throws UsbException {
-        //System.out.println("controlwrite " + (requestType&0xFF) + " " + (address&0xFF) + " " + (wValue&0xFF) + " " + (wIndex&0xFF) + " " + Arrays.toString(data));
         UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
         irp.setData(data);
         device.syncSubmit(irp);
     }
 
     public byte[] read(UsbDevice device) throws UsbException {
-        //System.out.println("controlread " + (requestType&0xFF) + " " + (address&0xFF) + " " + (wValue&0xFF) + " " + (wIndex&0xFF) + " " + Arrays.toString(data));
         UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
         irp.setData(data);
         device.syncSubmit(irp);

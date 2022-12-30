@@ -14,6 +14,7 @@ public class OscilloscopeManager {
 
     public static HashMap<UsbDevice, Oscilloscope> connections;
 
+    //TODO rename to clarify usage
     public static HashMap<UsbDevice, Oscilloscope> findAllDevices() throws UsbException {
         connections = new HashMap<>();
 

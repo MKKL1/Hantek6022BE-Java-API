@@ -27,6 +27,11 @@ public class FormattedDataStream extends AdcInputStream {
         channels = channelManager.getChannels();
     }
 
+    //TODO implement, should skip one packet of data, to be used on first packet which is unstable
+    public void skipPacket() {
+
+    }
+
     /**
      * Reads next data byte and formats it by given channel
      * @param scopeChannel channel to format with

@@ -6,7 +6,7 @@ import java.util.HexFormat;
 
 //It could also be intel hex file reader
 public class FirmwareReader extends Reader {
-    private BufferedReader bufferedReader;
+    private final BufferedReader bufferedReader;
 
     public FirmwareReader(BufferedReader bufferedReader) {
         this.bufferedReader = bufferedReader;

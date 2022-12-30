@@ -2,6 +2,7 @@ package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.adcdata.FormattedDataStream;
 import com.mkkl.hantekapi.channel.ActiveChannels;
+import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
@@ -31,13 +32,14 @@ public class Main {
         oscilloscope.setup();
         oscilloscope.open();
         oscilloscope.setActive(ActiveChannels.CH1CH2);
-        oscilloscope.getCalibrationValues((short) 32);
-        oscilloscope.getChannel(0).setVoltageRange(VoltageRange.RANGE5000mV);
+        oscilloscope.setSampleRate(SampleRates.SAMPLES_200kS_s);
+        oscilloscope.getCalibrationValues();
+        oscilloscope.getChannel(0).setVoltageRange(VoltageRange.RANGE2500mV);
         oscilloscope.getChannel(1).setVoltageRange(VoltageRange.RANGE5000mV);
         oscilloscope.getChannel(0).setProbeMultiplier(10);
 //        oscilloscope.getChannel(1).setAdditionalOffset(-5f);
         System.out.println(oscilloscope.getChannel(0).toString());
-
+        System.out.println(oscilloscope.getSampleRate().timeFromPointCount(0x400) + "s");
         BufferedWriter writer = new BufferedWriter(new FileWriter("E:\\programming\\hantek python api\\capture.txt"));
         DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
         df.setMaximumFractionDigits(340);

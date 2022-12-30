@@ -6,6 +6,7 @@ import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.HantekConnection;
+import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.VoltageRange;
 import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
 import com.mkkl.hantekapi.communication.interfaces.ScopeInterfaces;
@@ -22,6 +23,7 @@ public class Oscilloscope implements AutoCloseable{
     private final HantekConnection hantekConnection;
     private ChannelManager channelManager;
     private boolean firmwarePresent = false;
+    private SampleRates currentSampleRate;
 
     public Oscilloscope(UsbDevice usbDevice) {
         this.hantekConnection = new HantekConnection(usbDevice);
@@ -35,13 +37,13 @@ public class Oscilloscope implements AutoCloseable{
     public void setup() throws UsbException {
         this.channelManager = new ChannelManager(2, (newVoltageRange, channelid) ->
         {
-            System.out.println("sending " + newVoltageRange + " " + channelid);
             if(channelid == 0) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(getScopeDevice());
             else if(channelid == 1) ScopeControlRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).write(getScopeDevice());
             else throw new RuntimeException("Unknown channel id of " + channelid + "(" + channelid + 1 + ")");
         });
     }
 
+    //TODO rename
     public void open() throws UsbException {
         open(ScopeInterfaces.BulkTransfer);
     }
@@ -56,9 +58,24 @@ public class Oscilloscope implements AutoCloseable{
         hantekConnection.close();
     }
 
+    //TODO rename or move
     public void setActive(ActiveChannels activeChannels) throws UsbException {
         channelManager.setActiveChannelCount(activeChannels.getActiveCount());
         ScopeControlRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).write(hantekConnection.getScopeDevice());
+    }
+
+    public void setSampleRate(SampleRates sampleRates) throws UsbException {
+        currentSampleRate = sampleRates;
+        ScopeControlRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()).write(getScopeDevice());
+    }
+
+    public SampleRates getSampleRate() {
+        return currentSampleRate;
+    }
+
+    //TODO move to other class ?
+    public byte[] getCalibrationValues() throws UsbException {
+        return getCalibrationValues((short) 32);
     }
 
     public byte[] getCalibrationValues(short length) throws UsbException {
@@ -103,6 +120,7 @@ public class Oscilloscope implements AutoCloseable{
         hantekConnection.setStandardCalibration(calibrationvalues);
     }
 
+    //TODO rename
     public AdcInputStream getData() throws UsbException, IOException {
         return getData((short) 0x400);
     }

@@ -10,6 +10,7 @@ import javax.usb.*;
 import java.io.*;
 import java.util.Arrays;
 
+//TODO move all methods to oscilloscope ?
 public class HantekConnection implements AutoCloseable{
     private final UsbDevice scopeDevice;
     private final ScopeInterface scopeInterface;
@@ -41,8 +42,7 @@ public class HantekConnection implements AutoCloseable{
     }
 
     public void flash_firmware() throws IOException, UsbException {
-        flash_firmware(
-                Arrays.stream(Scopes.values())
+        flash_firmware(Arrays.stream(Scopes.values())
                         .filter(x -> x.getProductId() == scopeDevice.getUsbDeviceDescriptor().idProduct())
                         .findFirst()
                         .orElseThrow());
