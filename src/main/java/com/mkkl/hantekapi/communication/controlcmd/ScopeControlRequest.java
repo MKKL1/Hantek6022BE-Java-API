@@ -13,8 +13,12 @@ public class ScopeControlRequest extends ControlRequest{
         return new ScopeControlRequest((byte) 0x40, UsbConnectionConst.RW_FIRMWARE_REQUEST, address, UsbConnectionConst.RW_FIRMWARE_INDEX, data);
     }
 
-    public static ScopeControlRequest getEepromRequest(short address, byte[] data) {
+    public static ScopeControlRequest getEepromWriteRequest(short address, byte[] data) {
         return new ScopeControlRequest((byte) 0x40, UsbConnectionConst.RW_EEPROM_REQUEST, address, UsbConnectionConst.RW_EEPROM_INDEX, data);
+    }
+
+    public static ScopeControlRequest getEepromReadRequest(short address, byte[] data) {
+        return new ScopeControlRequest((byte) 0xC0, UsbConnectionConst.RW_EEPROM_REQUEST, address, UsbConnectionConst.RW_EEPROM_INDEX, data);
     }
 
     public static ScopeControlRequest getStartRequest() {

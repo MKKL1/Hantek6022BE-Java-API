@@ -6,7 +6,10 @@ import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
 import java.io.*;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.Arrays;
+import java.util.Locale;
 
 public class Main {
 
@@ -26,18 +29,28 @@ public class Main {
         }
 
         oscilloscope.setup();
-        oscilloscope.getCalibrationValues();
-        oscilloscope.setActive(ActiveChannels.CH1CH2);
-        oscilloscope.getChannel(0).setVoltageRange(VoltageRange.RANGE1000mV);
-        oscilloscope.getChannel(1).setVoltageRange(VoltageRange.RANGE250mV);
-        oscilloscope.getChannel(1).setProbeMultiplier(10);
-        oscilloscope.getChannel(1).setAdditionalOffset(-5f);
-
         oscilloscope.open();
+        oscilloscope.setActive(ActiveChannels.CH1CH2);
+        oscilloscope.getCalibrationValues((short) 32);
+        oscilloscope.getChannel(0).setVoltageRange(VoltageRange.RANGE5000mV);
+        oscilloscope.getChannel(1).setVoltageRange(VoltageRange.RANGE5000mV);
+        oscilloscope.getChannel(0).setProbeMultiplier(10);
+//        oscilloscope.getChannel(1).setAdditionalOffset(-5f);
+        System.out.println(oscilloscope.getChannel(0).toString());
+
+        BufferedWriter writer = new BufferedWriter(new FileWriter("E:\\programming\\hantek python api\\capture.txt"));
+        DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+        df.setMaximumFractionDigits(340);
+        float a = 0.00005f;
+        float b = 0;
         FormattedDataStream input = oscilloscope.getFormattedData();
         while(input.availableChannels() > 0) {
             System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
+            float[] f = input.readFormattedChannels();
+            writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
+            b += a;
         }
+        writer.close();
 
 
 

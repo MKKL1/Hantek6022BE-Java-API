@@ -49,20 +49,24 @@ public class ScopeChannel {
         for (int i = 0; i < newoffsets.length; i++) {
             offsets.put(voltageRanges[i], newoffsets[i]);
         }
+        recalculate_scalefactor();
     }
 
     public void setGains(float[] newoffsets) {
         for (int i = 0; i < newoffsets.length; i++) {
             gains.put(voltageRanges[i], newoffsets[i]);
         }
+        recalculate_scalefactor();
     }
 
     private void recalculate_scalefactor() {
+        _offset = offsets.get(currentVoltageRange);
+        _gain = gains.get(currentVoltageRange);
         scale_factor = ((5.12f * probeMultiplier * _gain) / (float)(currentVoltageRange.getGain() << 7));
     }
 
     public float formatData(byte rawdata) {
-        return ((rawdata&0xFF) - (_offset + additionalOffset)) * scale_factor;
+        return ((rawdata+128) - (_offset + additionalOffset)) * scale_factor;
     }
 
     public int getId() {
@@ -79,8 +83,6 @@ public class ScopeChannel {
 
     public void setVoltageRange(VoltageRange currentVoltageRange) throws UsbException {
         this.currentVoltageRange = currentVoltageRange;
-        _offset = offsets.get(currentVoltageRange);
-        _gain = gains.get(currentVoltageRange);
         recalculate_scalefactor();
         if(voltageRangeChangeEvent != null) voltageRangeChangeEvent.onVoltageChange(currentVoltageRange, id);
     }
@@ -108,10 +110,16 @@ public class ScopeChannel {
 
     @Override
     public String toString() {
+        System.out.println(offsets);
+        System.out.println(gains);
         return "ScopeChannel{" +
-                "id=" + id+1 +
-                ", offsets=" + offsets +
-                ", gains=" + gains +
+                "id=" + id +
+                ", _offset=" + _offset +
+                ", _gain=" + _gain +
+                ", scale_factor=" + scale_factor +
+                ", currentVoltageRange=" + currentVoltageRange +
+                ", probeMultiplier=" + probeMultiplier +
+                ", additionalOffset=" + additionalOffset +
                 '}';
     }
 }

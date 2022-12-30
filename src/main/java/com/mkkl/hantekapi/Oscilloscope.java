@@ -5,16 +5,17 @@ import com.mkkl.hantekapi.adcdata.FormattedDataStream;
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
-import com.mkkl.hantekapi.channel.VoltageRangeChange;
 import com.mkkl.hantekapi.communication.HantekConnection;
 import com.mkkl.hantekapi.constants.VoltageRange;
 import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
 import com.mkkl.hantekapi.communication.interfaces.ScopeInterfaces;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.usb.*;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HexFormat;
 
 public class Oscilloscope implements AutoCloseable{
@@ -35,8 +36,8 @@ public class Oscilloscope implements AutoCloseable{
         this.channelManager = new ChannelManager(2, (newVoltageRange, channelid) ->
         {
             System.out.println("sending " + newVoltageRange + " " + channelid);
-            if(channelid == 0) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).send(getScopeDevice());
-            else if(channelid == 1) ScopeControlRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).send(getScopeDevice());
+            if(channelid == 0) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(getScopeDevice());
+            else if(channelid == 1) ScopeControlRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).write(getScopeDevice());
             else throw new RuntimeException("Unknown channel id of " + channelid + "(" + channelid + 1 + ")");
         });
     }
@@ -57,39 +58,42 @@ public class Oscilloscope implements AutoCloseable{
 
     public void setActive(ActiveChannels activeChannels) throws UsbException {
         channelManager.setActiveChannelCount(activeChannels.getActiveCount());
-        ScopeControlRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).send(hantekConnection.getScopeDevice());
+        ScopeControlRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).write(hantekConnection.getScopeDevice());
     }
 
-    public byte[] getCalibrationValues() throws UsbException {
-        byte[] standardcalibration = hantekConnection.getStandardCalibration();
-        byte[] extendedcalibration = hantekConnection.getExtendedCalibration();
+    public byte[] getCalibrationValues(short length) throws UsbException {
+        byte[] standardcalibration = hantekConnection.getStandardCalibration(length);
         System.out.println(Arrays.toString(standardcalibration));
+        byte[] extendedcalibration = hantekConnection.getExtendedCalibration();
         System.out.println(Arrays.toString(extendedcalibration));
 
         for(int j = 0; j < channelManager.getChannelCount(); j++) {
             float[] calibration = new float[VoltageRange.values().length];
             for (int i = 0; i < 4; i++)
-                calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i] + j] - 128;
+                calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i] + j] + 128;
             channelManager.getChannel(j).setOffsets(calibration);
+            System.out.println(Arrays.toString(calibration));
         }
 
         for(int j = 0; j < channelManager.getChannelCount(); j++) {
-            float[] calibration = new float[VoltageRange.values().length];
+            Collection<Float> offsetsList = channelManager.getChannel(j).getOffsets().values();
+            float[] offsets = ArrayUtils.toPrimitive(offsetsList.toArray(new Float[0]), 0f);
             for (int i = 0; i < 4; i++) {
-                calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i]+j]-128;
+                offsets[i] = standardcalibration[ScopeChannel.calibrationOffsets[i]+j]+128;
                 byte extcal = extendedcalibration[48+ScopeChannel.calibrationOffsets[i]+j];
                 if (extcal != (byte)0 && extcal != (byte)255)
-                    calibration[i] = calibration[i] + (extcal - 128) / 250f;
+                    offsets[i] = offsets[i] + (extcal - 128) / 250f;
             }
-            channelManager.getChannel(j).setOffsets(calibration);
+            channelManager.getChannel(j).setOffsets(offsets);
 
-            float[] gains = new float[VoltageRange.values().length];
+            Collection<Float> gainslist = channelManager.getChannel(j).getGains().values();
+            float[] gains = ArrayUtils.toPrimitive(gainslist.toArray(new Float[0]), 1f);
             for (int i = 0; i < 4; i++) {
                 byte extcal = extendedcalibration[32+ScopeChannel.calibrationGainOff[i]+j];
                 if (extcal != 0 && extcal != (byte)255)
-                    gains[i] = gains[i] * (1 + (extcal - 128) / 500f);
+                    gains[i] = gains[i] * (1 + (extcal + 128) / 500f);
             }
-            channelManager.getChannel(j).setOffsets(gains);
+            channelManager.getChannel(j).setGains(gains);
         }
 
         return standardcalibration;
@@ -104,12 +108,12 @@ public class Oscilloscope implements AutoCloseable{
     }
 
     public AdcInputStream getData(short size) throws UsbException, IOException {
-        ScopeControlRequest.getStartRequest().send(getScopeDevice());
+        ScopeControlRequest.getStartRequest().write(getScopeDevice());
         AdcInputStream adcInputStream = new AdcInputStream(
                 hantekConnection.getScopeInterface().getEndpoint().syncReadPipe(size),
                 channelManager.getChannelCount(),
                 size);
-        ScopeControlRequest.getStopRequest().send(getScopeDevice());
+        ScopeControlRequest.getStopRequest().write(getScopeDevice());
         return adcInputStream;
     }
 
@@ -118,12 +122,12 @@ public class Oscilloscope implements AutoCloseable{
     }
 
     public FormattedDataStream getFormattedData(short size) throws UsbException, IOException {
-        ScopeControlRequest.getStartRequest().send(getScopeDevice());
+        ScopeControlRequest.getStartRequest().write(getScopeDevice());
         FormattedDataStream formattedDataStream = new FormattedDataStream(
                 hantekConnection.getScopeInterface().getEndpoint().syncReadPipe(size),
                 channelManager,
                 size);
-        ScopeControlRequest.getStopRequest().send(getScopeDevice());
+        ScopeControlRequest.getStopRequest().write(getScopeDevice());
         return formattedDataStream;
     }
 

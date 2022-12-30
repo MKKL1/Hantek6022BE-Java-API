@@ -3,6 +3,7 @@ package com.mkkl.hantekapi.communication.controlcmd;
 import javax.usb.UsbControlIrp;
 import javax.usb.UsbDevice;
 import javax.usb.UsbException;
+import java.util.Arrays;
 
 public class ControlRequest {
     private final byte requestType;
@@ -41,19 +42,23 @@ public class ControlRequest {
     }
 
     public UsbControlIrp getUsbControlIrp(UsbDevice device) {
-        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wValue);
+        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
         irp.setData(data);
         irp.setLength(data.length);
         return irp;
     }
 
-    public void send(UsbDevice device) throws UsbException {
-        UsbControlIrp irp = getUsbControlIrp(device);
+    public void write(UsbDevice device) throws UsbException {
+        //System.out.println("controlwrite " + (requestType&0xFF) + " " + (address&0xFF) + " " + (wValue&0xFF) + " " + (wIndex&0xFF) + " " + Arrays.toString(data));
+        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
+        irp.setData(data);
         device.syncSubmit(irp);
     }
 
-    public byte[] sendget(UsbDevice device) throws UsbException {
-        UsbControlIrp irp = getUsbControlIrp(device);
+    public byte[] read(UsbDevice device) throws UsbException {
+        //System.out.println("controlread " + (requestType&0xFF) + " " + (address&0xFF) + " " + (wValue&0xFF) + " " + (wIndex&0xFF) + " " + Arrays.toString(data));
+        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
+        irp.setData(data);
         device.syncSubmit(irp);
         return irp.getData();
     }

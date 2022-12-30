@@ -2,7 +2,6 @@ package com.mkkl.hantekapi.communication;
 
 import com.mkkl.hantekapi.constants.Scopes;
 import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
-import com.mkkl.hantekapi.communication.UsbConnectionConst;
 import com.mkkl.hantekapi.communication.interfaces.ScopeInterface;
 import com.mkkl.hantekapi.communication.interfaces.ScopeInterfaces;
 import com.mkkl.hantekapi.firmware.*;
@@ -34,11 +33,11 @@ public class HantekConnection implements AutoCloseable{
     }
 
     public byte[] read_eeprom(short offset, short length) throws UsbException {
-        return ScopeControlRequest.getEepromRequest(offset, new byte[length]).sendget(scopeDevice);
+        return ScopeControlRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
     }
 
     public void write_eeprom(short offset, byte[] data) throws UsbException {
-        ScopeControlRequest.getEepromRequest(offset, data).send(scopeDevice);
+        ScopeControlRequest.getEepromWriteRequest(offset, data).write(scopeDevice);
     }
 
     public void flash_firmware() throws IOException, UsbException {
@@ -67,12 +66,13 @@ public class HantekConnection implements AutoCloseable{
 
     public void flash_firmware(ScopeFirmware firmware) throws UsbException {
         for(FirmwareControlPacket packet : firmware.getFirmwareData()) {
-            ScopeControlRequest.getFirmwareRequest(packet.address(), packet.data()).send(scopeDevice);
+            ScopeControlRequest.getFirmwareRequest(packet.address(), packet.data()).write(scopeDevice);
         }
     }
 
-    public byte[] getStandardCalibration() throws UsbException {
-        return read_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, (short) 32);
+    //TODO move to scopecontrolrequest
+    public byte[] getStandardCalibration(short length) throws UsbException {
+        return read_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, length);
     }
 
     public void setStandardCalibration(byte[] data) throws UsbException {
