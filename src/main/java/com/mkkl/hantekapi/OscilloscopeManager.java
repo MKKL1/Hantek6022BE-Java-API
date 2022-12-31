@@ -4,6 +4,7 @@ import com.mkkl.hantekapi.constants.Scopes;
 
 import javax.usb.*;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 
 //Making sure if for some reason you have multiple oscilloscopes connected you can manage them all
@@ -14,8 +15,7 @@ public class OscilloscopeManager {
 
     public static HashMap<UsbDevice, Oscilloscope> connections;
 
-    //TODO rename to clarify usage
-    public static HashMap<UsbDevice, Oscilloscope> findAllDevices() throws UsbException {
+    public static HashMap<UsbDevice, Oscilloscope> findSupportedDevices() throws UsbException {
         connections = new HashMap<>();
 
         UsbHub rootUsbHub = UsbHostManager.getUsbServices().getRootUsbHub();
@@ -33,51 +33,46 @@ public class OscilloscopeManager {
 //        });
 
         for(Scopes scope : new Scopes[]{Scopes.DSO6022BE, Scopes.DSO6022BL, Scopes.DSO6021}) {
-            usbDevices.stream().filter(x -> {
-                UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-                return (desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID || desc.idVendor() == NO_FIRMWARE_VENDOR_ID)&& desc.idProduct() == scope.getProductId();
-            }).forEach(x -> {
-                UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-                boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdDevice() == FIRMWARE_VERSION;
-                Oscilloscope oscilloscope = new Oscilloscope(x, isFirmwarePresent);
-                connections.put(x, oscilloscope);
-            });
+            filterDevices(usbDevices, scope);
         }
 
         return connections;
     }
 
-    public static HashMap<UsbDevice, Oscilloscope> getOscilloscope(Scopes scope) throws UsbException {
+    public static HashMap<UsbDevice, Oscilloscope> findDevice(Scopes scope) throws UsbException {
+        connections = new HashMap<>();
         UsbHub rootUsbHub = UsbHostManager.getUsbServices().getRootUsbHub();
         List<UsbDevice> usbDevices = (List<UsbDevice>) rootUsbHub.getAttachedUsbDevices();
+        filterDevices(usbDevices, scope);
 
-        usbDevices.stream().filter(x -> {
-            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-            return desc.idVendor() != FIRMWARE_PRESENT_VENDOR_ID && desc.idVendor() != NO_FIRMWARE_VENDOR_ID &&
-                    (desc.idProduct() == scope.getProductId());
-        }).forEach(x -> {
-            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-            boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdUSB() == FIRMWARE_VERSION;
-            Oscilloscope oscilloscope = new Oscilloscope(x, isFirmwarePresent);
-            connections.put(x, oscilloscope);
-        });
         return connections;
     }
 
-    //TODO throw ScopeNotFoundExc
-    public static Oscilloscope getFirstOscilloscope(Scopes scope) throws UsbException {
-        return getOscilloscope(scope)
-                .entrySet()
-                .stream()
-                .filter(x -> x.getKey().getUsbDeviceDescriptor().idProduct() == scope.getProductId())
-                .findFirst()
-                .orElseThrow()
-                .getValue();
+    private static void filterDevices(List<UsbDevice> usbDevices, Scopes scope) {
+        usbDevices.stream().filter(x -> {
+            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
+            return (desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID || desc.idVendor() == NO_FIRMWARE_VENDOR_ID) &&
+                    desc.idProduct() == scope.getProductId();
+        }).forEach(x -> {
+            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
+            boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdDevice() == FIRMWARE_VERSION;
+            Oscilloscope oscilloscope = new Oscilloscope(x, isFirmwarePresent);
+            connections.put(x, oscilloscope);
+        });
     }
 
     //TODO throw ScopeNotFoundExc
+    public static Oscilloscope findAndGetFirst(Scopes scope) throws UsbException {
+        return findDevice(scope).entrySet().stream()
+                .findFirst()
+                .orElseThrow(() ->
+                    new ScopeNotFoundException("Couldn't find device with product id of '0x" +
+                            HexFormat.of().toHexDigits(scope.getProductId()) + "'"))
+                .getValue();
+    }
+
     public static Oscilloscope getFirstFound() {
-        return connections.entrySet().stream().findFirst().orElseThrow().getValue();
+        return connections.entrySet().stream().findFirst().orElseThrow(ScopeNotFoundException::new).getValue();
     }
 
 }

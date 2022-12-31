@@ -1,32 +1,35 @@
 package com.mkkl.hantekapi;
 
-import com.mkkl.hantekapi.adcdata.AdcInputStream;
-import com.mkkl.hantekapi.adcdata.FormattedDataStream;
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.channel.ChannelManager;
+import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.channel.ScopeChannel;
-import com.mkkl.hantekapi.communication.HantekConnection;
+import com.mkkl.hantekapi.communication.UsbConnectionConst;
 import com.mkkl.hantekapi.constants.SampleRates;
+import com.mkkl.hantekapi.constants.Scopes;
 import com.mkkl.hantekapi.constants.VoltageRange;
 import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
-import com.mkkl.hantekapi.communication.interfaces.ScopeInterfaces;
+import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
+import com.mkkl.hantekapi.firmware.FirmwareReader;
+import com.mkkl.hantekapi.firmware.ScopeFirmware;
+import com.mkkl.hantekapi.firmware.SupportedFirmwares;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.usb.*;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HexFormat;
 
-public class Oscilloscope implements AutoCloseable{
-    private final HantekConnection hantekConnection;
+public class Oscilloscope {
     private ChannelManager channelManager;
     private boolean firmwarePresent = false;
     private SampleRates currentSampleRate;
+    private final UsbDevice scopeDevice;
+    private boolean deviceSetup = false;
 
     public Oscilloscope(UsbDevice usbDevice) {
-        this.hantekConnection = new HantekConnection(usbDevice);
+        this.scopeDevice = usbDevice;
     }
 
     public Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
@@ -37,52 +40,38 @@ public class Oscilloscope implements AutoCloseable{
     public void setup() throws UsbException {
         this.channelManager = new ChannelManager(2, (newVoltageRange, channelid) ->
         {
-            if(channelid == 0) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(getScopeDevice());
-            else if(channelid == 1) ScopeControlRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).write(getScopeDevice());
-            else throw new RuntimeException("Unknown channel id of " + channelid + "(" + channelid + 1 + ")");
+            if(channelid == Channels.CH1) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(scopeDevice);
+            else if(channelid == Channels.CH2) ScopeControlRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).write(scopeDevice);
+            else throw new RuntimeException("Unknown channel " + channelid);
         });
+        deviceSetup = true;
     }
 
-    //TODO rename
-    public void open() throws UsbException {
-        open(ScopeInterfaces.BulkTransfer);
-    }
-
-    public void open(ScopeInterfaces scopeInterfaces) throws UsbException {
-        hantekConnection.setInterface(scopeInterfaces);
-        hantekConnection.open();
-    }
-
-    @Override
-    public void close() throws UsbException {
-        hantekConnection.close();
-    }
-
-    //TODO rename or move
-    public void setActive(ActiveChannels activeChannels) throws UsbException {
+    public void setActiveChannels(ActiveChannels activeChannels) throws UsbException {
+        if(!deviceSetup) throw new DeviceNotInitialized();
         channelManager.setActiveChannelCount(activeChannels.getActiveCount());
-        ScopeControlRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).write(hantekConnection.getScopeDevice());
+        ScopeControlRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).write(scopeDevice);
     }
 
     public void setSampleRate(SampleRates sampleRates) throws UsbException {
         currentSampleRate = sampleRates;
-        ScopeControlRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()).write(getScopeDevice());
+        ScopeControlRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()).write(scopeDevice);
     }
 
     public SampleRates getSampleRate() {
         return currentSampleRate;
     }
 
-    //TODO move to other class ?
+
     public byte[] getCalibrationValues() throws UsbException {
         return getCalibrationValues((short) 32);
     }
 
+    //TODO move to each channel to set
     public byte[] getCalibrationValues(short length) throws UsbException {
-        byte[] standardcalibration = hantekConnection.getStandardCalibration(length);
-        System.out.println(Arrays.toString(standardcalibration));
-        byte[] extendedcalibration = hantekConnection.getExtendedCalibration();
-        System.out.println(Arrays.toString(extendedcalibration));
+        if(!deviceSetup) throw new DeviceNotInitialized();
+        byte[] standardcalibration = read_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, length);
+        byte[] extendedcalibration = read_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, (short) 80);
 
         for(int j = 0; j < channelManager.getChannelCount(); j++) {
             float[] calibration = new float[VoltageRange.values().length];
@@ -116,56 +105,64 @@ public class Oscilloscope implements AutoCloseable{
         return standardcalibration;
     }
 
-    public void setCalibrationValues(byte[] calibrationvalues) throws UsbException {
-        hantekConnection.setStandardCalibration(calibrationvalues);
+    public byte[] read_eeprom(short offset, short length) throws UsbException {
+        return ScopeControlRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
     }
 
-    //TODO rename
-    public AdcInputStream getData() throws UsbException, IOException {
-        return getData((short) 0x400);
+    public void write_eeprom(short offset, byte[] data) throws UsbException {
+        ScopeControlRequest.getEepromWriteRequest(offset, data).write(scopeDevice);
     }
 
-    public AdcInputStream getData(short size) throws UsbException, IOException {
-        ScopeControlRequest.getStartRequest().write(getScopeDevice());
-        AdcInputStream adcInputStream = new AdcInputStream(
-                hantekConnection.getScopeInterface().getEndpoint().syncReadPipe(size),
-                channelManager.getChannelCount(),
-                size);
-        ScopeControlRequest.getStopRequest().write(getScopeDevice());
-        return adcInputStream;
+    public void flash_firmware() throws IOException, UsbException {
+        flash_firmware(Arrays.stream(Scopes.values())
+                .filter(x -> x.getProductId() == scopeDevice.getUsbDeviceDescriptor().idProduct())
+                .findFirst()
+                .orElseThrow());
     }
 
-    public FormattedDataStream getFormattedData() throws UsbException, IOException {
-        return getFormattedData((short) 0x400);
+    public void flash_firmware(Scopes scope) throws IOException, UsbException {
+        flash_firmware(scope.getFirmwareToFlash());
     }
 
-    public FormattedDataStream getFormattedData(short size) throws UsbException, IOException {
-        ScopeControlRequest.getStartRequest().write(getScopeDevice());
-        FormattedDataStream formattedDataStream = new FormattedDataStream(
-                hantekConnection.getScopeInterface().getEndpoint().syncReadPipe(size),
-                channelManager,
-                size);
-        ScopeControlRequest.getStopRequest().write(getScopeDevice());
-        return formattedDataStream;
+    public void flash_firmware(SupportedFirmwares supportedFirmwares) throws IOException, UsbException {
+        InputStream firmwareInputStream = getClass().getClassLoader().getResourceAsStream(supportedFirmwares.getFilename());
+        flash_firmware(firmwareInputStream);
     }
 
-    public UsbDevice getScopeDevice() {
-        return hantekConnection.getScopeDevice();
+    public void flash_firmware(InputStream firmwareInputStream) throws IOException, UsbException {
+        if (firmwareInputStream == null) throw new IOException("No firmware in input stream");
+        try(FirmwareReader firmwareReader = new FirmwareReader(new BufferedReader(new InputStreamReader(firmwareInputStream)))) {
+            flash_firmware(new ScopeFirmware(firmwareReader.readAll()));
+        }
     }
 
-    public HantekConnection getHantekConnection() {
-        return hantekConnection;
+    public void flash_firmware(ScopeFirmware firmware) throws UsbException {
+        for(FirmwareControlPacket packet : firmware.getFirmwareData()) {
+            ScopeControlRequest.getFirmwareRequest(packet.address(), packet.data()).write(scopeDevice);
+        }
+    }
+
+    public void setStandardCalibration(byte[] data) throws UsbException {
+        write_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, data);
+    }
+
+    //TODO Copied for easier access
+    public ScopeChannel getChannel(Channels channels) {
+        return getChannel(channels.getChannelId());
     }
 
     public ScopeChannel getChannel(int id) {
+        if(!deviceSetup) throw new DeviceNotInitialized();
         return channelManager.getChannel(id);
     }
 
     public ScopeChannel[] getChannels() {
+        if(!deviceSetup) throw new DeviceNotInitialized();
         return channelManager.getChannels();
     }
 
     public ChannelManager getChannelManager() {
+        if(!deviceSetup) throw new DeviceNotInitialized();
         return channelManager;
     }
 
@@ -173,12 +170,19 @@ public class Oscilloscope implements AutoCloseable{
         return firmwarePresent;
     }
 
+    public UsbDevice getScopeDevice() {
+        return scopeDevice;
+    }
+
+    public SampleRates getCurrentSampleRate() {
+        return currentSampleRate;
+    }
+
     @Override
     public String toString() {
         String s = "Oscilloscope ";
-        UsbDevice usbDevice = getScopeDevice();
         try {
-            s += usbDevice.getProductString();
+            s += scopeDevice.getProductString();
         } catch (UsbException | UnsupportedEncodingException e) {
             s += "UNKNOWN_PRODUCT_STRING";
         }
@@ -186,26 +190,20 @@ public class Oscilloscope implements AutoCloseable{
     }
 
     public String getDescriptor() {
-        String s = "Oscilloscope ";
-        UsbDevice usbDevice = getScopeDevice();
-        try {
-            s += usbDevice.getProductString() + System.lineSeparator();
-        } catch (UsbException | UnsupportedEncodingException e) {
-            s += "UNKNOWN_PRODUCT_STRING"+ System.lineSeparator();
-        }
-        UsbDeviceDescriptor usbDeviceDescriptor = usbDevice.getUsbDeviceDescriptor();
+        String s = this + System.lineSeparator();
+        UsbDeviceDescriptor usbDeviceDescriptor = scopeDevice.getUsbDeviceDescriptor();
         s += " idProduct=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.idProduct()) + System.lineSeparator();
         s += " idVendor=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.idVendor()) + System.lineSeparator();
         s += " bcdDevice=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.bcdDevice()) + System.lineSeparator();
         s += " isFirmwarePresent=" + isFirmwarePresent() + System.lineSeparator();
-        s += " interfaces=" + usbDevice.getActiveUsbConfiguration().getUsbInterfaces().toString() + System.lineSeparator();
+        s += " interfaces=" + scopeDevice.getActiveUsbConfiguration().getUsbInterfaces().toString() + System.lineSeparator();
         try {
-            s += " manufacturer=" + usbDevice.getManufacturerString() + System.lineSeparator();
+            s += " manufacturer=" + scopeDevice.getManufacturerString() + System.lineSeparator();
         } catch (UsbException | UnsupportedEncodingException e) {
             s += " manufacturer=UNKNOWN" + System.lineSeparator();
         }
         try {
-            s += " serial=" + usbDevice.getSerialNumberString() + System.lineSeparator();
+            s += " serial=" + scopeDevice.getSerialNumberString() + System.lineSeparator();
         } catch (UsbException | UnsupportedEncodingException e) {
             s += " serial=UNKNOWN" + System.lineSeparator();
         }

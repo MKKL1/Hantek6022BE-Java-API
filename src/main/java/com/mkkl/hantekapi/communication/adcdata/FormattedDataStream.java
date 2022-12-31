@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi.adcdata;
+package com.mkkl.hantekapi.communication.adcdata;
 
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
@@ -8,7 +8,7 @@ import java.io.PipedInputStream;
 
 /**
  * Variant of {@link AdcInputStream} which formats output data to human readable form.
- * Opposite to {@link AdcInputStream} it takes into account which channels are active automatically
+ * Opposite to {@link AdcInputStream}, it takes into account which channels are active automatically
  */
 public class FormattedDataStream extends AdcInputStream {
     private final ChannelManager channelManager;

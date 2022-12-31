@@ -39,7 +39,7 @@ public enum SampleRates {
     public int getSampleCount() {
         return sampleCount;
     }
-
+    //TODO time seems to be wrong
     public float timeFromPointCount(long pointCount) {
         return pointCount/(float)sampleCount;
     }

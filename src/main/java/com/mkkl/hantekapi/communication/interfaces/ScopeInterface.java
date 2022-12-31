@@ -3,10 +3,9 @@ package com.mkkl.hantekapi.communication.interfaces;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.BulkEndpoint;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.EndpointTypes;
+import com.mkkl.hantekapi.communication.interfaces.endpoints.IsochronousEndpoint;
 
-import javax.usb.UsbDevice;
-import javax.usb.UsbException;
-import javax.usb.UsbInterface;
+import javax.usb.*;
 
 public class ScopeInterface implements AutoCloseable{
     private Endpoint endpoint;
@@ -17,11 +16,11 @@ public class ScopeInterface implements AutoCloseable{
         this.usbDevice = usbDevice;
     }
 
-    public void setInterface(ScopeInterfaces scopeInterfaces) {
-        this.usbInterface = usbDevice.getActiveUsbConfiguration().getUsbInterface(scopeInterfaces.getInterfaceId());
-        if(scopeInterfaces.getEndpointType() == EndpointTypes.Bulk)
+    public void setInterface(SupportedInterfaces supportedInterfaces) {
+        this.usbInterface = usbDevice.getActiveUsbConfiguration().getUsbInterface(supportedInterfaces.getInterfaceId());
+        if(supportedInterfaces.getEndpointType() == EndpointTypes.Bulk)
             this.endpoint = new BulkEndpoint(usbInterface);
-        else if(scopeInterfaces.getEndpointType() == EndpointTypes.Iso)
+        else if(supportedInterfaces.getEndpointType() == EndpointTypes.Iso)
             this.endpoint = new IsochronousEndpoint(usbInterface);
         //shouldn't be here
         else throw new RuntimeException("Endpoint type not supported");

@@ -1,8 +1,10 @@
 package com.mkkl.hantekapi;
 
-import com.mkkl.hantekapi.adcdata.FormattedDataStream;
-import com.mkkl.hantekapi.channel.ActiveChannels;
+import com.mkkl.hantekapi.communication.adcdata.FormattedDataStream;
+import com.mkkl.hantekapi.channel.Channels;
+import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.constants.SampleRates;
+import com.mkkl.hantekapi.constants.Scopes;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
@@ -14,55 +16,50 @@ import java.util.Locale;
 
 public class Main {
 
-    public static void main(String[] args) throws UsbException, IOException, InterruptedException {
-        OscilloscopeManager.findAllDevices();
-        Oscilloscope oscilloscope = OscilloscopeManager.getFirstFound();
+    public static void main(String[] args) throws IOException, UsbException, InterruptedException {
+        Oscilloscope oscilloscope = OscilloscopeManager.findAndGetFirst(Scopes.DSO6022BE);
 
         System.out.println(oscilloscope.getDescriptor());
 
         if(!oscilloscope.isFirmwarePresent()) {
             System.out.println("Flashing firmware");
-            oscilloscope.getHantekConnection().flash_firmware();
+            oscilloscope.flash_firmware();
             Thread.sleep(5000);
-            OscilloscopeManager.findAllDevices();
+            OscilloscopeManager.findSupportedDevices();
             oscilloscope = OscilloscopeManager.getFirstFound();
             System.out.println(oscilloscope.getDescriptor());
         }
 
         oscilloscope.setup();
-        oscilloscope.open();
-        oscilloscope.setActive(ActiveChannels.CH1CH2);
+        //oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
         oscilloscope.setSampleRate(SampleRates.SAMPLES_200kS_s);
         oscilloscope.getCalibrationValues();
-        oscilloscope.getChannel(0).setVoltageRange(VoltageRange.RANGE2500mV);
-        oscilloscope.getChannel(1).setVoltageRange(VoltageRange.RANGE5000mV);
-        oscilloscope.getChannel(0).setProbeMultiplier(10);
-//        oscilloscope.getChannel(1).setAdditionalOffset(-5f);
-        System.out.println(oscilloscope.getChannel(0).toString());
-        System.out.println(oscilloscope.getSampleRate().timeFromPointCount(0x400) + "s");
+        oscilloscope.getChannel(Channels.CH1).setVoltageRange(VoltageRange.RANGE2500mV);
+        oscilloscope.getChannel(Channels.CH2).setVoltageRange(VoltageRange.RANGE5000mV);
+        oscilloscope.getChannel(Channels.CH1).setProbeMultiplier(10);
+
+        System.out.println(oscilloscope.getSampleRate().timeFromPointCount(512) + "s");
+
         BufferedWriter writer = new BufferedWriter(new FileWriter("E:\\programming\\hantek python api\\capture.txt"));
         DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
         df.setMaximumFractionDigits(340);
-        float a = 0.00005f;
+        float a = oscilloscope.getSampleRate().timeFromPointCount(512);
         float b = 0;
-        FormattedDataStream input = oscilloscope.getFormattedData();
-        while(input.availableChannels() > 0) {
-            System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
-            float[] f = input.readFormattedChannels();
-            writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
-            b += a;
+        int i = 0;
+        try(ScopeDataReader scopeDataReader = new ScopeDataReader(oscilloscope)) {
+            FormattedDataStream input = scopeDataReader.readFormattedDataFrame();
+            while(input.availableChannels() > 0) {
+                //System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
+                float[] f = input.readFormattedChannels();
+                writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
+                b += a;
+                i++;
+            }
+            writer.close();
+        } catch (UsbException e) {
+            e.printStackTrace();
         }
-        writer.close();
-
-
-
-
-
-
-
-
-
-        oscilloscope.getHantekConnection().getScopeInterface().getEndpoint().close();
+        System.out.println(i);
 
     }
 }

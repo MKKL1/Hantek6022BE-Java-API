@@ -1,7 +1,5 @@
-package com.mkkl.hantekapi.adcdata;
+package com.mkkl.hantekapi.communication.adcdata;
 
-import javax.usb.UsbDevice;
-import javax.usb.UsbPipe;
 import java.io.*;
 
 /**

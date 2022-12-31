@@ -12,7 +12,7 @@ public class ScopeChannel {
     public static final byte[] calibrationOffsets = {0, 6, 8, 14};
     public static final byte[] calibrationGainOff = {0, 4, 8, 14};
 
-    private final int id;
+    private final Channels id;
     private final HashMap<VoltageRange, Float> offsets = new HashMap<>();
     private final HashMap<VoltageRange, Float> gains;
     private VoltageRangeChange voltageRangeChangeEvent = null;
@@ -28,12 +28,12 @@ public class ScopeChannel {
 
     public float currentData;
 
-    public ScopeChannel(int id, VoltageRangeChange voltageRangeChangeEvent) throws UsbException {
+    public ScopeChannel(Channels id, VoltageRangeChange voltageRangeChangeEvent) throws UsbException {
         this(id);
         this.voltageRangeChangeEvent = voltageRangeChangeEvent;
     }
 
-    public ScopeChannel(int id) throws UsbException {
+    public ScopeChannel(Channels id) throws UsbException {
         this.id = id;
         for(VoltageRange range : voltageRanges) offsets.put(range, 0f);
         gains = new HashMap<>(){{
@@ -69,12 +69,8 @@ public class ScopeChannel {
         return ((rawdata+128) - (_offset + additionalOffset)) * scale_factor;
     }
 
-    public int getId() {
+    public Channels getId() {
         return id;
-    }
-
-    public int getChannelNumber() {
-        return id+1;
     }
 
     public HashMap<VoltageRange, Float> getOffsets() {

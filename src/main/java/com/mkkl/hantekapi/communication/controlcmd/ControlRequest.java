@@ -41,6 +41,7 @@ public class ControlRequest {
         return data;
     }
 
+    //TODO cleanup
     public UsbControlIrp getUsbControlIrp(UsbDevice device) {
         UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
         irp.setData(data);
