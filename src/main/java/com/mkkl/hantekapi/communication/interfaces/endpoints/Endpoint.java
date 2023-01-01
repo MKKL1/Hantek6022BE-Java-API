@@ -12,10 +12,10 @@ public class Endpoint implements AutoCloseable {
     protected byte endpointAddress;
     protected UsbEndpoint usbEndpoint;
     protected UsbPipe pipe;
-    private final UsbEndpointDescriptor descriptor;
-    private final short maxPacketSize;
-    private final short packetSize;
-    private boolean isPipeOpen = false;
+    protected final UsbEndpointDescriptor descriptor;
+    protected final short maxPacketSize;
+    protected final short packetSize;
+    protected boolean isPipeOpen = false;
 
     public Endpoint(byte endpointAddress, UsbInterface usbInterface) {
         this.endpointAddress = endpointAddress;
@@ -27,7 +27,7 @@ public class Endpoint implements AutoCloseable {
     }
 
     //TODO close outputstream
-    private UsbIrp createReader(PipedInputStream pipedInputStream) throws UsbException, IOException {
+    protected UsbIrp createReader(PipedInputStream pipedInputStream) throws UsbException, IOException {
         final PipedOutputStream outputStream = new PipedOutputStream(pipedInputStream);
 
         UsbIrp irp = pipe.createUsbIrp();
@@ -52,21 +52,11 @@ public class Endpoint implements AutoCloseable {
     }
 
     public PipedInputStream asyncReadPipe(short size) throws UsbException, IOException {
-        if(!isPipeOpen) openPipe();
-        final PipedInputStream inputStream = new PipedInputStream();
-        UsbIrp irp = createReader(inputStream);
-        irp.setData(new byte[size]);
-        pipe.asyncSubmit(irp);
-        return inputStream;
+        return null;
     }
+
     public PipedInputStream syncReadPipe(short size) throws UsbException, IOException {
-        if(!isPipeOpen) openPipe();
-        final PipedInputStream inputStream = new PipedInputStream();
-        UsbIrp irp = createReader(inputStream);
-        irp.setData(new byte[size]);
-        pipe.asyncSubmit(irp);
-        irp.waitUntilComplete();
-        return inputStream;
+        return null;
     }
 
     public UsbEndpoint getUsbEndpoint() {
@@ -86,13 +76,13 @@ public class Endpoint implements AutoCloseable {
     }
 
     public void openPipe() throws UsbException {
-        isPipeOpen = true;
         pipe.open();
+        isPipeOpen = true;
     }
 
     @Override
     public void close() throws UsbException {
-        isPipeOpen = false;
         pipe.close();
+        isPipeOpen = false;
     }
 }

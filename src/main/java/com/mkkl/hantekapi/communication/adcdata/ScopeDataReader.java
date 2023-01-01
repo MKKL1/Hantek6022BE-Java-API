@@ -53,33 +53,43 @@ public class ScopeDataReader implements AutoCloseable{
         return capture;
     }
 
+    private AdcInputStream syncRead(short size) throws IOException, UsbException {
+        return new AdcInputStream(
+                scopeInterface.getEndpoint().syncReadPipe(size),
+                oscilloscope.getChannelManager().getChannelCount(),
+                size);
+    }
+
+    private AdcInputStream asyncRead(short size) throws IOException, UsbException {
+        return new AdcInputStream(
+                scopeInterface.getEndpoint().asyncReadPipe(size),
+                oscilloscope.getChannelManager().getChannelCount(),
+                size);
+    }
+
     public AdcInputStream readDataFrame() throws UsbException, IOException {
         return readDataFrame((short) 0x400);
     }
 
     public AdcInputStream readDataFrame(short size) throws UsbException, IOException {
         if(oscilloscope.getChannelManager().getActiveChannelCount() == 0) oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
-        startCapture();
-        AdcInputStream adcInputStream = new AdcInputStream(
-                scopeInterface.getEndpoint().syncReadPipe(size),
-                oscilloscope.getChannelManager().getChannelCount(),
-                size);
+        if(!capture) startCapture();
+        AdcInputStream adcInputStream = syncRead(size);
         stopCapture();
         return adcInputStream;
     }
 
-    public FormattedDataStream readFormattedDataFrame() throws UsbException, IOException {
-        return readFormattedDataFrame((short) 0x400);
+    public AdcInputStream asyncReadDataFrame() throws UsbException, IOException {
+        return readDataFrame((short) 0x400);
     }
 
-    public FormattedDataStream readFormattedDataFrame(short size) throws UsbException, IOException {
+    public AdcInputStream asyncReadDataFrame(short size) throws UsbException, IOException {
         if(oscilloscope.getChannelManager().getActiveChannelCount() == 0) oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
-        startCapture();
-        FormattedDataStream formattedDataStream = new FormattedDataStream(
-                scopeInterface.getEndpoint().syncReadPipe(size),
-                oscilloscope.getChannelManager(),
-                size);
+        if(!capture) startCapture();
+        AdcInputStream adcInputStream = syncRead(size);
         stopCapture();
-        return formattedDataStream;
+        return adcInputStream;
     }
+
+
 }

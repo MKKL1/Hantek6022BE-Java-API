@@ -38,6 +38,7 @@ public class Oscilloscope {
     }
 
     public void setup() throws UsbException {
+        //TODO not sure this is the right way
         this.channelManager = new ChannelManager(2, (newVoltageRange, channelid) ->
         {
             if(channelid == Channels.CH1) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(scopeDevice);
