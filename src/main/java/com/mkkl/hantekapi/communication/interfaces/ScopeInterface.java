@@ -22,20 +22,20 @@ public class ScopeInterface implements AutoCloseable{
     //TODO high-level usb4java api doesn't provide utility to set interface's active setting
     public void setInterface(SupportedInterfaces supportedInterfaces) throws UsbException {
         this.usbInterface = usbDevice.getActiveUsbConfiguration().getUsbInterface((byte)0);
-//        usbInterface.claim();
-        setAltSetting(usbInterface, supportedInterfaces.getInterfaceId());
-
-        System.out.println(usbInterface.isActive());
-
-        this.activeSetting = usbInterface.getSetting(supportedInterfaces.getInterfaceId());
-
-        System.out.println(usbInterface.getUsbInterfaceDescriptor().bInterfaceNumber());
-        System.out.println(activeSetting.getUsbInterfaceDescriptor().bInterfaceNumber());
+////        usbInterface.claim();
+//        setAltSetting(usbInterface, supportedInterfaces.getInterfaceId());
+//
+//        System.out.println(usbInterface.isActive());
+//
+//        this.activeSetting = usbInterface.getSetting(supportedInterfaces.getInterfaceId());
+//
+//        System.out.println(usbInterface.getUsbInterfaceDescriptor().bInterfaceNumber());
+//        System.out.println(activeSetting.getUsbInterfaceDescriptor().bInterfaceNumber());
 
         if(supportedInterfaces.getEndpointType() == EndpointTypes.Bulk)
-            this.endpoint = new BulkEndpoint(activeSetting);
+            this.endpoint = new BulkEndpoint(usbInterface);
         else if(supportedInterfaces.getEndpointType() == EndpointTypes.Iso)
-            this.endpoint = new IsochronousEndpoint(activeSetting);
+            this.endpoint = new IsochronousEndpoint(usbInterface);
         //shouldn't be here
         else throw new RuntimeException("Endpoint type not supported");
     }
@@ -49,12 +49,12 @@ public class ScopeInterface implements AutoCloseable{
     }
 
     public void claim() throws UsbException {
-        activeSetting.claim();
+        usbInterface.claim();
     }
 
     @Override
     public void close() throws UsbException {
-        activeSetting.release();
+        usbInterface.release();
 //        usbInterface.release();
     }
 

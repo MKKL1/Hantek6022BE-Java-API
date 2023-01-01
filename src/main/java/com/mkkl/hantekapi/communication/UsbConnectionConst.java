@@ -29,5 +29,9 @@ public class UsbConnectionConst {
     public static final short SET_SAMPLE_RATE_VALUE = (short) 0x00;
     public static final short SET_SAMPLE_RATE_INDEX = (short) 0x00;
 
+    public static final byte SET_CAL_FREQ_REQUEST = (byte) 0xe6;
+    public static final short SET_CAL_FREQ_VALUE = 0x00;
+    public static final short SET_CAL_FREQ_INDEX = 0x00;
+
 
 }

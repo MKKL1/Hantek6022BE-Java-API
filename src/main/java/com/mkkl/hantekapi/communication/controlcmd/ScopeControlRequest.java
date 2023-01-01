@@ -73,4 +73,12 @@ public class ScopeControlRequest extends ControlRequest{
                 UsbConnectionConst.SET_SAMPLE_RATE_INDEX,
                 new byte[] {sample_rate_index});
     }
+
+    public static ScopeControlRequest getCalibrationFreqSetRequest(byte byte_freq) {
+        return new ScopeControlRequest((byte) 0x40,
+                UsbConnectionConst.SET_CAL_FREQ_REQUEST,
+                UsbConnectionConst.SET_CAL_FREQ_VALUE,
+                UsbConnectionConst.SET_CAL_FREQ_INDEX,
+                new byte[] {byte_freq});
+    }
 }

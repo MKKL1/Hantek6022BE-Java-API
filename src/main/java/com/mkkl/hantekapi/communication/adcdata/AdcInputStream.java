@@ -1,27 +1,34 @@
 package com.mkkl.hantekapi.communication.adcdata;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Basic input stream for data from oscilloscope.
  * It is used to divide data to chunks of length {@link #channelcount}
  */
-public class AdcInputStream extends PipedInputStream {
+public class AdcInputStream {
 
     PipedInputStream pipedInputStream;
-    int channelcount = 0;
+    final int channelcount;
     int length;
+    public final int packetsize;
 
     /**
      * @param pipedInputStream input stream from usb endpoint
      * @param channelcount count of active channels
      * @param length expected length of data to be read
+     * @param packetsize
      */
-    public AdcInputStream(PipedInputStream pipedInputStream, int channelcount, int length) {
+    public AdcInputStream(PipedInputStream pipedInputStream, int channelcount, int length, int packetsize) {
         super();
         this.pipedInputStream = pipedInputStream;
         this.channelcount = channelcount;
         this.length = length;
+        this.packetsize = packetsize;
     }
 
     /**
@@ -35,6 +42,9 @@ public class AdcInputStream extends PipedInputStream {
             bytes[i] = (byte) read();
         }
         return bytes;
+    }
+    public void skipPacket() throws IOException {
+        skip(packetsize);
     }
 
 
@@ -58,8 +68,34 @@ public class AdcInputStream extends PipedInputStream {
         return pipedInputStream.read(b, off, len);
     }
 
+
+
     public synchronized int available() throws IOException {
         return length;
+    }
+
+
+    public byte[] readNBytes(int len) throws IOException {
+        byte[] bytes = pipedInputStream.readNBytes(len);
+        length -= len;
+        return bytes;
+    }
+
+    public int readNBytes(byte[] b, int off, int len) throws IOException {
+        int res = pipedInputStream.readNBytes(b, off, len);
+        length -= len;
+        return res;
+    }
+
+    public long skip(long n) throws IOException {
+        long res = pipedInputStream.skip(n);
+        length -= n;
+        return res;
+    }
+
+    public void skipNBytes(long n) throws IOException {
+        pipedInputStream.skipNBytes(n);
+        length -= n;
     }
 
     public void close() throws IOException {

@@ -41,6 +41,7 @@ public class Main {
         oscilloscope.getChannel(Channels.CH1).setVoltageRange(VoltageRange.RANGE2500mV);
         oscilloscope.getChannel(Channels.CH2).setVoltageRange(VoltageRange.RANGE5000mV);
         oscilloscope.getChannel(Channels.CH1).setProbeMultiplier(10);
+        oscilloscope.setCalibrationFrequency(10000);
         System.out.println(oscilloscope.getSampleRate().timeFromPointCount(512) + "s");
 
         BufferedWriter writer = new BufferedWriter(new FileWriter("E:\\programming\\hantek python api\\capture.txt"));
@@ -49,7 +50,7 @@ public class Main {
         float a = oscilloscope.getSampleRate().timeFromPointCount(512);
         float b = 0;
         int i = 0;
-        try(ScopeDataReader scopeDataReader = new ScopeDataReader(oscilloscope, SupportedInterfaces.Iso3072Transfer)) {
+        try(ScopeDataReader scopeDataReader = new ScopeDataReader(oscilloscope)) {
             FormattedDataStream input = new FormattedDataStream(scopeDataReader.asyncReadDataFrame(), oscilloscope.getChannelManager());
             while(input.available() > 0) {
                 //System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");

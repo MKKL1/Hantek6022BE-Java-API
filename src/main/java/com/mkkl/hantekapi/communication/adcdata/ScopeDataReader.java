@@ -1,8 +1,6 @@
 package com.mkkl.hantekapi.communication.adcdata;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
-import com.mkkl.hantekapi.communication.adcdata.FormattedDataStream;
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
 import com.mkkl.hantekapi.communication.interfaces.ScopeInterface;
@@ -18,6 +16,8 @@ public class ScopeDataReader implements AutoCloseable{
     private final UsbDevice scopeDevice;
     private final ScopeInterface scopeInterface;
     private boolean capture = false;
+    private boolean skipFirstPacket = true;
+    private boolean skipNextPacket = true;
 
     public ScopeDataReader(Oscilloscope oscilloscope, SupportedInterfaces supportedInterfaces) throws UsbException {
         this.oscilloscope = oscilloscope;
@@ -41,6 +41,7 @@ public class ScopeDataReader implements AutoCloseable{
 
     public void startCapture() throws UsbException {
         capture = true;
+        if(skipFirstPacket) skipNextPacket = true;
         ScopeControlRequest.getStartRequest().write(scopeDevice);
     }
 
@@ -53,18 +54,30 @@ public class ScopeDataReader implements AutoCloseable{
         return capture;
     }
 
+    public void shouldSkipFirstPacket(boolean skipFirstPacket) {
+        this.skipFirstPacket = skipFirstPacket;
+    }
+
     private AdcInputStream syncRead(short size) throws IOException, UsbException {
-        return new AdcInputStream(
+        if(skipNextPacket) size += scopeInterface.getEndpoint().getPacketSize();
+        AdcInputStream adcInputStream =  new AdcInputStream(
                 scopeInterface.getEndpoint().syncReadPipe(size),
                 oscilloscope.getChannelManager().getChannelCount(),
-                size);
+                size,
+                scopeInterface.getEndpoint().getPacketSize());
+        adcInputStream.skipPacket();
+        return adcInputStream;
     }
 
     private AdcInputStream asyncRead(short size) throws IOException, UsbException {
-        return new AdcInputStream(
+        if(skipNextPacket) size += scopeInterface.getEndpoint().getPacketSize();
+        AdcInputStream adcInputStream =  new AdcInputStream(
                 scopeInterface.getEndpoint().asyncReadPipe(size),
                 oscilloscope.getChannelManager().getChannelCount(),
-                size);
+                size,
+                scopeInterface.getEndpoint().getPacketSize());
+        adcInputStream.skipPacket();
+        return adcInputStream;
     }
 
     public AdcInputStream readDataFrame() throws UsbException, IOException {

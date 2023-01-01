@@ -27,9 +27,8 @@ public class FormattedDataStream implements Closeable {
         channels = channelManager.getChannels();
     }
 
-    //TODO implement, should skip one packet of data, to be used on first packet which is unstable
-    public void skipPacket() {
-
+    public void skipPacket() throws IOException {
+        adcInputStream.skipPacket();
     }
 
     /**

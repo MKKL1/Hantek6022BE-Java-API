@@ -106,6 +106,10 @@ public class Oscilloscope {
         return standardcalibration;
     }
 
+    public void setStandardCalibration(byte[] data) throws UsbException {
+        write_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, data);
+    }
+
     public byte[] read_eeprom(short offset, short length) throws UsbException {
         return ScopeControlRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
     }
@@ -143,8 +147,14 @@ public class Oscilloscope {
         }
     }
 
-    public void setStandardCalibration(byte[] data) throws UsbException {
-        write_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, data);
+    public void setCalibrationFrequency(int frequency) throws UsbException {
+        if(frequency<32 || frequency>100000) throw new RuntimeException("Unsupported frequency of " + frequency);
+        byte bytefreq;
+        if (frequency < 1000) bytefreq = (byte) ((frequency/10)+100);
+        else if (frequency < 5600) bytefreq = (byte) ((frequency/100)+200);
+        else bytefreq = (byte) (frequency/1000);
+
+        ScopeControlRequest.getCalibrationFreqSetRequest(bytefreq).write(scopeDevice);
     }
 
     //TODO Copied for easier access
