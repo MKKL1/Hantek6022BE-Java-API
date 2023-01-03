@@ -7,6 +7,7 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.PipedInputStream;
+import java.util.ArrayList;
 
 //TODO find better way to check for end of stream than throwing exception
 
@@ -17,7 +18,7 @@ import java.io.PipedInputStream;
 public class FormattedDataStream implements Closeable {
     private final ChannelManager channelManager;
     private final int activeChannelCount;
-    private final ScopeChannel[] channels;
+    private final ArrayList<ScopeChannel> channels;
     private final AdcInputStream adcInputStream;
     /**
      * @param adcInputStream input stream from usb endpoint
@@ -64,7 +65,7 @@ public class FormattedDataStream implements Closeable {
         byte[] bytes = adcInputStream.readChannels();
         if(bytes == null) throw new EOFException("End of stream");
         for (int i = 0; i < activeChannelCount; i++) {
-            channels[i].currentData = channels[i].formatData(bytes[i]);
+            channels.get(i).currentData = channels.get(i).formatData(bytes[i]);
         }
     }
 
@@ -77,7 +78,7 @@ public class FormattedDataStream implements Closeable {
         if(bytes == null) throw new EOFException("End of stream");
         float[] formatteddata = new float[bytes.length];
         for (int i = 0; i < bytes.length; i++) {
-            formatteddata[i] = channels[i].formatData(bytes[i]);
+            formatteddata[i] =channels.get(i).formatData(bytes[i]);
         }
         return formatteddata;
     }

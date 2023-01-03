@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.communication.controlcmd.CalibrationData;
 
 import javax.usb.UsbException;
 import java.util.ArrayList;
@@ -56,6 +57,13 @@ public class ChannelManager {
 
     public ScopeChannel getChannel(Channels channels) {
         return getChannel(channels.getChannelId());
+    }
+
+    public void setCalibration(CalibrationData calibrationData) {
+        for(Channels channel : Channels.values()) {
+            getChannel(channel).setOffsets(calibrationData.getOffsets(channel));
+            getChannel(channel).setGains(calibrationData.getGains(channel));
+        }
     }
 
     /**

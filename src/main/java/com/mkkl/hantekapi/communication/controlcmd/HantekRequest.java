@@ -13,8 +13,8 @@ public class HantekRequest {
         return new ControlRequest((byte) 0x40, UsbConnectionConst.RW_EEPROM_REQUEST, address, UsbConnectionConst.RW_EEPROM_INDEX, data);
     }
 
-    public static ControlRequest getEepromReadRequest(short address, byte[] data) {
-        return new ControlRequest((byte) 0xC0, UsbConnectionConst.RW_EEPROM_REQUEST, address, UsbConnectionConst.RW_EEPROM_INDEX, data);
+    public static ControlRequest getEepromReadRequest(short address, short length) {
+        return new ControlRequest((byte) 0xC0, UsbConnectionConst.RW_EEPROM_REQUEST, address, UsbConnectionConst.RW_EEPROM_INDEX, new byte[length]);
     }
 
     public static ControlRequest getStartRequest() {

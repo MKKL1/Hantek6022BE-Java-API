@@ -1,17 +1,17 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 
 
 public class ScopeChannel {
     private static final VoltageRange[] voltageRanges = VoltageRange.values();
-    public static final byte[] calibrationOffsets = {0, 6, 8, 14};
-    public static final byte[] calibrationGainOff = {0, 4, 8, 14};
 
     private final Oscilloscope oscilloscope;
     private final Channels id;
@@ -55,17 +55,14 @@ public class ScopeChannel {
                         .orElseThrow(() -> new IllegalArgumentException("Id of " + id + "not found in enum")));
     }
 
-    public void setOffsets(float[] newoffsets) {
-        for (int i = 0; i < newoffsets.length; i++) {
-            offsets.put(voltageRanges[i], newoffsets[i]);
-        }
+    public void setOffsets(HashMap<VoltageRange, Float> newOffsets) {
+        this.offsets.putAll(newOffsets);
         recalculate_scalefactor();
     }
 
-    public void setGains(float[] newoffsets) {
-        for (int i = 0; i < newoffsets.length; i++) {
-            gains.put(voltageRanges[i], newoffsets[i]);
-        }
+    public void setGains(HashMap<VoltageRange, Float> newGains) {
+        for(Map.Entry<VoltageRange, Float> entry : newGains.entrySet())
+            this.gains.put(entry.getKey(), this.gains.get(entry.getKey()) * entry.getValue());
         recalculate_scalefactor();
     }
 
@@ -95,10 +92,11 @@ public class ScopeChannel {
         return currentVoltageRange;
     }
 
-    public void setVoltageRange(VoltageRange currentVoltageRange) throws UsbException {
+    public void setVoltageRange(VoltageRange currentVoltageRange) {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
-
+        if(id == Channels.CH1) oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
+        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
     }
 
     public int getProbeMultiplier() {

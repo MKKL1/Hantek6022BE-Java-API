@@ -5,6 +5,7 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
+import com.mkkl.hantekapi.communication.controlcmd.CalibrationData;
 import com.mkkl.hantekapi.communication.controlcmd.ControlRequest;
 import com.mkkl.hantekapi.communication.controlcmd.ControlResponse;
 import com.mkkl.hantekapi.constants.SampleRates;
@@ -19,6 +20,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import javax.usb.*;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HexFormat;
@@ -45,26 +47,46 @@ public class Oscilloscope {
 
     public Oscilloscope setup() throws UsbException {
         //TODO not sure this is the right way
-        this.channelManager = new ChannelManager(2, (newVoltageRange, channelid) ->
-        {
-            if(channelid == Channels.CH1) HantekRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(scopeDevice);
-            else if(channelid == Channels.CH2) HantekRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).write(scopeDevice);
-            else throw new RuntimeException("Unknown channel " + channelid);
-        });
+        channelManager = ChannelManager.create(this);
         deviceSetup = true;
         return this;
     }
 
-    public <T> ControlResponse<T> request(final ControlRequest controlRequest, final Class<T> tClass) {
-        byte[] bytes = tClass;
+    public ControlResponse<byte[]> rawRequest(final ControlRequest controlRequest) {
+        byte[] bytes = null;
         UsbException e = null;
         try {
             bytes = controlRequest.read(scopeDevice);
         } catch (UsbException _e) {
             e = _e;
         }
+        return new ControlResponse<>(bytes, e);
+    }
 
+    //TODO make giving class obligatory to avoid using wrong method
+    public <T extends Serializable> ControlResponse<T> request(final ControlRequest controlRequest) {
+        ControlResponse<byte[]> rawResponse = rawRequest(controlRequest);
+        Exception e = null;
+        T body = null;
+        try {
+            rawResponse.onFailureThrow();
+            ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(rawResponse.get()));
+            body = (T)in.readObject();
+        } catch (Exception _e) {
+            e = _e;
+        }
 
+        return new ControlResponse<>(body, e);
+    }
+
+    public ControlResponse<Void> patch(final ControlRequest controlRequest) {
+        UsbException e = null;
+        try {
+            controlRequest.write(scopeDevice);
+        } catch (UsbException _e) {
+            e = _e;
+        }
+        return new ControlResponse<>(null, e);
     }
 
     public void setActiveChannels(ActiveChannels activeChannels) throws UsbException {
@@ -83,59 +105,39 @@ public class Oscilloscope {
     }
 
 
-    public byte[] getCalibrationValues() throws UsbException {
-        return getCalibrationValues((short) 32);
-    }
-
-    //TODO move to each channel to set
-    public byte[] getCalibrationValues(short length) throws UsbException {
+    public CalibrationData readCalibrationValues() {
         if(!deviceSetup) throw new DeviceNotInitialized();
-        byte[] standardcalibration = read_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, length);
-        byte[] extendedcalibration = read_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, (short) 80);
+        CalibrationData calibrationData = (CalibrationData) request(
+                    HantekRequest.getEepromReadRequest(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, (short) 80))
+                .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()))
+                .get();
+        return calibrationData;
+    }
 
-        for(int j = 0; j < channelManager.getChannelCount(); j++) {
-            float[] calibration = new float[VoltageRange.values().length];
-            for (int i = 0; i < 4; i++)
-                calibration[i] = standardcalibration[ScopeChannel.calibrationOffsets[i] + j] + 128;
-            channelManager.getChannel(j).setOffsets(calibration);
-            System.out.println(Arrays.toString(calibration));
+    public void writeCalibrationValues(CalibrationData calibrationData) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        try {
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+            objectOutputStream.writeObject(calibrationData);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-
-        for(int j = 0; j < channelManager.getChannelCount(); j++) {
-            Collection<Float> offsetsList = channelManager.getChannel(j).getOffsets().values();
-            float[] offsets = ArrayUtils.toPrimitive(offsetsList.toArray(new Float[0]), 0f);
-            for (int i = 0; i < 4; i++) {
-                offsets[i] = standardcalibration[ScopeChannel.calibrationOffsets[i]+j]+128;
-                byte extcal = extendedcalibration[48+ScopeChannel.calibrationOffsets[i]+j];
-                if (extcal != (byte)0 && extcal != (byte)255)
-                    offsets[i] = offsets[i] + (extcal - 128) / 250f;
-            }
-            channelManager.getChannel(j).setOffsets(offsets);
-
-            Collection<Float> gainslist = channelManager.getChannel(j).getGains().values();
-            float[] gains = ArrayUtils.toPrimitive(gainslist.toArray(new Float[0]), 1f);
-            for (int i = 0; i < 4; i++) {
-                byte extcal = extendedcalibration[32+ScopeChannel.calibrationGainOff[i]+j];
-                if (extcal != 0 && extcal != (byte)255)
-                    gains[i] = gains[i] * (1 + (extcal + 128) / 500f);
-            }
-            channelManager.getChannel(j).setGains(gains);
-        }
-
-        return standardcalibration;
+        patch(HantekRequest.getEepromWriteRequest(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, byteArrayOutputStream.toByteArray()))
+                .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
     }
 
-    public void setStandardCalibration(byte[] data) throws UsbException {
-        write_eeprom(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, data);
+    public void setCalibration(CalibrationData calibrationData) {
+        channelManager.setCalibration(calibrationData);
     }
 
-    public byte[] read_eeprom(short offset, short length) throws UsbException {
-        return HantekRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
-    }
-
-    public void write_eeprom(short offset, byte[] data) throws UsbException {
-        HantekRequest.getEepromWriteRequest(offset, data).write(scopeDevice);
-    }
+//
+//    public byte[] read_eeprom(short offset, short length) throws UsbException {
+//        return HantekRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
+//    }
+//
+//    public void write_eeprom(short offset, byte[] data) throws UsbException {
+//        HantekRequest.getEepromWriteRequest(offset, data).write(scopeDevice);
+//    }
 
     public void flash_firmware() throws IOException, UsbException {
         flash_firmware(Arrays.stream(Scopes.values())
@@ -186,7 +188,7 @@ public class Oscilloscope {
         return channelManager.getChannel(id);
     }
 
-    public ScopeChannel[] getChannels() {
+    public ArrayList<ScopeChannel> getChannels() {
         if(!deviceSetup) throw new DeviceNotInitialized();
         return channelManager.getChannels();
     }
