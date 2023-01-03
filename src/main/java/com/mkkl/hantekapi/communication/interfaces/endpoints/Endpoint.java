@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 
-public class Endpoint implements AutoCloseable {
+public abstract class Endpoint {
     protected byte endpointAddress;
     protected UsbEndpoint usbEndpoint;
     protected UsbPipe pipe;
@@ -27,9 +27,7 @@ public class Endpoint implements AutoCloseable {
     }
 
     //TODO close outputstream
-    protected UsbIrp createReader(PipedInputStream pipedInputStream) throws UsbException, IOException {
-        final PipedOutputStream outputStream = new PipedOutputStream(pipedInputStream);
-
+    protected synchronized UsbIrp createReader(PipedOutputStream outputStream) throws UsbException, IOException {
         UsbIrp irp = pipe.createUsbIrp();
         pipe.addUsbPipeListener(new UsbPipeListener() {
             @Override
@@ -51,13 +49,9 @@ public class Endpoint implements AutoCloseable {
         return irp;
     }
 
-    public PipedInputStream asyncReadPipe(short size) throws UsbException, IOException {
-        return null;
-    }
+    public abstract void asyncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException;
 
-    public PipedInputStream syncReadPipe(short size) throws UsbException, IOException {
-        return null;
-    }
+    public abstract void syncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException;
 
     public UsbEndpoint getUsbEndpoint() {
         return usbEndpoint;
@@ -80,7 +74,6 @@ public class Endpoint implements AutoCloseable {
         isPipeOpen = true;
     }
 
-    @Override
     public void close() throws UsbException {
         pipe.close();
         isPipeOpen = false;

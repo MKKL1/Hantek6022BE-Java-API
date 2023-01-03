@@ -56,7 +56,7 @@ public class OscilloscopeManager {
         }).forEach(x -> {
             UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
             boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdDevice() == FIRMWARE_VERSION;
-            Oscilloscope oscilloscope = new Oscilloscope(x, isFirmwarePresent);
+            Oscilloscope oscilloscope = Oscilloscope.create(x, isFirmwarePresent);
             connections.put(x, oscilloscope);
         });
     }

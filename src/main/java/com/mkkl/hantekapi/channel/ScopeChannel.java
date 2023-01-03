@@ -4,6 +4,7 @@ import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
+import java.util.Arrays;
 import java.util.HashMap;
 
 
@@ -12,15 +13,24 @@ public class ScopeChannel {
     public static final byte[] calibrationOffsets = {0, 6, 8, 14};
     public static final byte[] calibrationGainOff = {0, 4, 8, 14};
 
+    private final Oscilloscope oscilloscope;
     private final Channels id;
-    private final HashMap<VoltageRange, Float> offsets = new HashMap<>();
-    private final HashMap<VoltageRange, Float> gains;
-    private VoltageRangeChange voltageRangeChangeEvent = null;
+    private final HashMap<VoltageRange, Float> offsets = new HashMap<>(){{
+        put(VoltageRange.RANGE5000mV, 0f);
+        put(VoltageRange.RANGE2500mV, 0f);
+        put(VoltageRange.RANGE1000mV, 0f);
+        put(VoltageRange.RANGE250mV, 0f);}};
+
+    private final HashMap<VoltageRange, Float> gains = new HashMap<>(){{
+        put(VoltageRange.RANGE5000mV, 1.01f);
+        put(VoltageRange.RANGE2500mV, 1.01f);
+        put(VoltageRange.RANGE1000mV, 0.99f);
+        put(VoltageRange.RANGE250mV, 1f);}};
 
     //Save data from hashmap to variable each time a voltage range is changed
-    private float _offset;
-    private float _gain;
-    private float scale_factor = 1;
+    private float current_offset;
+    private float current_gain;
+    private float current_scale_factor = 1;
 
     private VoltageRange currentVoltageRange;
     private int probeMultiplier = 1;
@@ -28,21 +38,21 @@ public class ScopeChannel {
 
     public float currentData;
 
-    public ScopeChannel(Channels id, VoltageRangeChange voltageRangeChangeEvent) throws UsbException {
-        this(id);
-        this.voltageRangeChangeEvent = voltageRangeChangeEvent;
+    private ScopeChannel(Oscilloscope oscilloscope, Channels id) {
+        this.oscilloscope = oscilloscope;
+        this.id = id;
     }
 
-    public ScopeChannel(Channels id) throws UsbException {
-        this.id = id;
-        for(VoltageRange range : voltageRanges) offsets.put(range, 0f);
-        gains = new HashMap<>(){{
-                put(VoltageRange.RANGE5000mV, 1.01f);
-                put(VoltageRange.RANGE2500mV, 1.01f);
-                put(VoltageRange.RANGE1000mV, 0.99f);
-                put(VoltageRange.RANGE250mV, 1f);}};
+    public static ScopeChannel create(Oscilloscope oscilloscope, Channels id) {
+        return new ScopeChannel(oscilloscope, id);
+    }
 
-        setVoltageRange(VoltageRange.RANGE5000mV);
+    public static ScopeChannel create(Oscilloscope oscilloscope, int id) {
+        return new ScopeChannel(oscilloscope,
+                Arrays.stream(Channels.values())
+                        .filter(x -> x.getChannelId() == id)
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Id of " + id + "not found in enum")));
     }
 
     public void setOffsets(float[] newoffsets) {
@@ -60,13 +70,13 @@ public class ScopeChannel {
     }
 
     private void recalculate_scalefactor() {
-        _offset = offsets.get(currentVoltageRange);
-        _gain = gains.get(currentVoltageRange);
-        scale_factor = ((5.12f * probeMultiplier * _gain) / (float)(currentVoltageRange.getGain() << 7));
+        current_offset = offsets.get(currentVoltageRange);
+        current_gain = gains.get(currentVoltageRange);
+        current_scale_factor = ((5.12f * probeMultiplier * current_gain) / (float)(currentVoltageRange.getGain() << 7));
     }
 
     public float formatData(byte rawdata) {
-        return ((rawdata+128) - (_offset + additionalOffset)) * scale_factor;
+        return ((rawdata+128) - (current_offset + additionalOffset)) * current_scale_factor;
     }
 
     public Channels getId() {
@@ -88,7 +98,7 @@ public class ScopeChannel {
     public void setVoltageRange(VoltageRange currentVoltageRange) throws UsbException {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
-        if(voltageRangeChangeEvent != null) voltageRangeChangeEvent.onVoltageChange(currentVoltageRange, id);
+
     }
 
     public int getProbeMultiplier() {
@@ -114,9 +124,9 @@ public class ScopeChannel {
         System.out.println(gains);
         return "ScopeChannel{" +
                 "id=" + id +
-                ", _offset=" + _offset +
-                ", _gain=" + _gain +
-                ", scale_factor=" + scale_factor +
+                ", _offset=" + current_offset +
+                ", _gain=" + current_gain +
+                ", scale_factor=" + current_scale_factor +
                 ", currentVoltageRange=" + currentVoltageRange +
                 ", probeMultiplier=" + probeMultiplier +
                 ", additionalOffset=" + additionalOffset +

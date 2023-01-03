@@ -5,10 +5,12 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
+import com.mkkl.hantekapi.communication.controlcmd.ControlRequest;
+import com.mkkl.hantekapi.communication.controlcmd.ControlResponse;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.Scopes;
 import com.mkkl.hantekapi.constants.VoltageRange;
-import com.mkkl.hantekapi.communication.controlcmd.ScopeControlRequest;
+import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
 import com.mkkl.hantekapi.firmware.FirmwareReader;
 import com.mkkl.hantekapi.firmware.ScopeFirmware;
@@ -23,40 +25,57 @@ import java.util.HexFormat;
 
 public class Oscilloscope {
     private ChannelManager channelManager;
-    private boolean firmwarePresent = false;
+    private final boolean firmwarePresent;
     private SampleRates currentSampleRate;
     private final UsbDevice scopeDevice;
     private boolean deviceSetup = false;
 
-    public Oscilloscope(UsbDevice usbDevice) {
+    private Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
         this.scopeDevice = usbDevice;
-    }
-
-    public Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
-        this(usbDevice);
         this.firmwarePresent = firmwarePresent;
     }
 
-    public void setup() throws UsbException {
+    public static Oscilloscope create(UsbDevice usbDevice) {
+        return new Oscilloscope(usbDevice, false);
+    }
+
+    public static Oscilloscope create(UsbDevice usbDevice, boolean firmwarePresent) {
+        return new Oscilloscope(usbDevice, firmwarePresent);
+    }
+
+    public Oscilloscope setup() throws UsbException {
         //TODO not sure this is the right way
         this.channelManager = new ChannelManager(2, (newVoltageRange, channelid) ->
         {
-            if(channelid == Channels.CH1) ScopeControlRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(scopeDevice);
-            else if(channelid == Channels.CH2) ScopeControlRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).write(scopeDevice);
+            if(channelid == Channels.CH1) HantekRequest.getVoltRangeCH1Request((byte) newVoltageRange.getGain()).write(scopeDevice);
+            else if(channelid == Channels.CH2) HantekRequest.getVoltRangeCH2Request((byte) newVoltageRange.getGain()).write(scopeDevice);
             else throw new RuntimeException("Unknown channel " + channelid);
         });
         deviceSetup = true;
+        return this;
+    }
+
+    public <T> ControlResponse<T> request(final ControlRequest controlRequest, final Class<T> tClass) {
+        byte[] bytes = tClass;
+        UsbException e = null;
+        try {
+            bytes = controlRequest.read(scopeDevice);
+        } catch (UsbException _e) {
+            e = _e;
+        }
+
+
     }
 
     public void setActiveChannels(ActiveChannels activeChannels) throws UsbException {
         if(!deviceSetup) throw new DeviceNotInitialized();
         channelManager.setActiveChannelCount(activeChannels.getActiveCount());
-        ScopeControlRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).write(scopeDevice);
+        HantekRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).write(scopeDevice);
     }
 
     public void setSampleRate(SampleRates sampleRates) throws UsbException {
         currentSampleRate = sampleRates;
-        ScopeControlRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()).write(scopeDevice);
+        HantekRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()).write(scopeDevice);
     }
 
     public SampleRates getSampleRate() {
@@ -111,11 +130,11 @@ public class Oscilloscope {
     }
 
     public byte[] read_eeprom(short offset, short length) throws UsbException {
-        return ScopeControlRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
+        return HantekRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
     }
 
     public void write_eeprom(short offset, byte[] data) throws UsbException {
-        ScopeControlRequest.getEepromWriteRequest(offset, data).write(scopeDevice);
+        HantekRequest.getEepromWriteRequest(offset, data).write(scopeDevice);
     }
 
     public void flash_firmware() throws IOException, UsbException {
@@ -143,7 +162,7 @@ public class Oscilloscope {
 
     public void flash_firmware(ScopeFirmware firmware) throws UsbException {
         for(FirmwareControlPacket packet : firmware.getFirmwareData()) {
-            ScopeControlRequest.getFirmwareRequest(packet.address(), packet.data()).write(scopeDevice);
+            HantekRequest.getFirmwareRequest(packet.address(), packet.data()).write(scopeDevice);
         }
     }
 
@@ -154,7 +173,7 @@ public class Oscilloscope {
         else if (frequency < 5600) bytefreq = (byte) ((frequency/100)+200);
         else bytefreq = (byte) (frequency/1000);
 
-        ScopeControlRequest.getCalibrationFreqSetRequest(bytefreq).write(scopeDevice);
+        HantekRequest.getCalibrationFreqSetRequest(bytefreq).write(scopeDevice);
     }
 
     //TODO Copied for easier access

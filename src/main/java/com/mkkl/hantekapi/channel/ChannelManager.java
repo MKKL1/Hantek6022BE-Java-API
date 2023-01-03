@@ -1,22 +1,27 @@
 package com.mkkl.hantekapi.channel;
 
+import com.mkkl.hantekapi.Oscilloscope;
+
 import javax.usb.UsbException;
+import java.util.ArrayList;
 
 /**
  * Used to make managing array of channels easier.
  */
 public class ChannelManager {
     private final int channelCount;
-    private final ScopeChannel[] scopeChannels;
+    private final ArrayList<ScopeChannel> scopeChannels = new ArrayList<>();
     private int activeChannelCount = 0;
 
-    public ChannelManager(int channelCount, VoltageRangeChange voltageRangeChangeEvent) throws UsbException {
-        this.channelCount = channelCount;
-        scopeChannels = new ScopeChannel[channelCount];
-        Channels[] channelsList = Channels.values();
-        for (int i = 0; i < channelCount; i++) {
-            scopeChannels[i] = new ScopeChannel(channelsList[i], voltageRangeChangeEvent);
-        }
+    private ChannelManager(Oscilloscope oscilloscope) {
+        this.channelCount = Channels.values().length;
+
+        for(Channels ch : Channels.values())
+            scopeChannels.add(ScopeChannel.create(oscilloscope, ch));
+    }
+
+    public static ChannelManager create(Oscilloscope oscilloscope) {
+        return new ChannelManager(oscilloscope);
     }
 
     //TODO this method shouldn't be accessed from oscilloscope object
@@ -37,15 +42,16 @@ public class ChannelManager {
         return activeChannelCount;
     }
 
-    public ScopeChannel[] getChannels() {
+    public ArrayList<ScopeChannel> getChannels() {
         return scopeChannels;
     }
 
+    //TODO use hashmap instead of arraylist
     /**
      * @param id Channel index, 0 for channel 1 or 1 for channel 2
      */
     public ScopeChannel getChannel(int id) {
-        return scopeChannels[id];
+        return scopeChannels.get(id);
     }
 
     public ScopeChannel getChannel(Channels channels) {

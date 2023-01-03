@@ -9,6 +9,7 @@ import javax.usb.UsbInterface;
 import javax.usb.UsbIrp;
 import java.io.IOException;
 import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 
 public class IsochronousEndpoint extends Endpoint {
     public IsochronousEndpoint(UsbInterface usbInterface) {
@@ -16,34 +17,28 @@ public class IsochronousEndpoint extends Endpoint {
         if(usbEndpoint.getType() != UsbConst.ENDPOINT_TYPE_ISOCHRONOUS) throw new RuntimeException("Endpoint is not isochronous");
     }
 
-    @Override
-    public PipedInputStream asyncReadPipe(short size) throws UsbException, IOException {
+    public void asyncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException {
         if(!isPipeOpen) openPipe();
-        final PipedInputStream inputStream = new PipedInputStream();
 
         short bytesToRead = size;
         while(bytesToRead > 0) {
             short packetSize = bytesToRead > this.packetSize ? this.packetSize : bytesToRead;
-            UsbIrp irp = createReader(inputStream);
+            UsbIrp irp = createReader(outputStream);
             irp.setData(new byte[size]);
             pipe.asyncSubmit(irp);
             bytesToRead -= packetSize;
         }
-        return inputStream;
     }
 
-    @Override
-    public PipedInputStream syncReadPipe(short size) throws UsbException, IOException {
+    public void syncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException {
         if(!isPipeOpen) openPipe();
-        final PipedInputStream inputStream = new PipedInputStream();
         short bytesToRead = size;
         while(bytesToRead > 0) {
             short packetSize = bytesToRead > this.packetSize ? this.packetSize : bytesToRead;
-            UsbIrp irp = createReader(inputStream);
+            UsbIrp irp = createReader(outputStream);
             irp.setData(new byte[size]);
             pipe.syncSubmit(irp);
             bytesToRead -= packetSize;
         }
-        return inputStream;
     }
 }

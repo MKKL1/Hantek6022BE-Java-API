@@ -9,7 +9,7 @@ import org.usb4java.LibUsb;
 import javax.usb.*;
 import java.util.List;
 
-public class ScopeInterface implements AutoCloseable{
+public class ScopeInterface {
     private Endpoint endpoint;
     private UsbInterface usbInterface;
     private final UsbDevice usbDevice;
@@ -52,8 +52,8 @@ public class ScopeInterface implements AutoCloseable{
         usbInterface.claim();
     }
 
-    @Override
     public void close() throws UsbException {
+        endpoint.close();
         usbInterface.release();
 //        usbInterface.release();
     }

@@ -4,8 +4,11 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.PipedInputStream;
+
+//TODO find better way to check for end of stream than throwing exception
 
 /**
  * Variant of {@link AdcInputStream} which formats output data to human readable form.
@@ -37,7 +40,9 @@ public class FormattedDataStream implements Closeable {
      * @return Actual voltage on channel
      */
     public float readFormatted(ScopeChannel scopeChannel) throws IOException {
-        return scopeChannel.formatData((byte) adcInputStream.read());
+        int i = adcInputStream.read();
+        if(i == -1) throw new EOFException("End of stream");
+        return scopeChannel.formatData((byte) i);
     }
 
     /**
@@ -46,7 +51,9 @@ public class FormattedDataStream implements Closeable {
      * @return Actual voltage on channel
      */
     public float readFormatted(int channelId) throws IOException {
-        return channelManager.getChannel(channelId).formatData((byte) adcInputStream.read());
+        int i = adcInputStream.read();
+        if(i == -1) throw new EOFException("End of stream");
+        return channelManager.getChannel(channelId).formatData((byte) i);
     }
 
     /**
@@ -55,6 +62,7 @@ public class FormattedDataStream implements Closeable {
      */
     public void readToChannels() throws IOException {
         byte[] bytes = adcInputStream.readChannels();
+        if(bytes == null) throw new EOFException("End of stream");
         for (int i = 0; i < activeChannelCount; i++) {
             channels[i].currentData = channels[i].formatData(bytes[i]);
         }
@@ -66,15 +74,12 @@ public class FormattedDataStream implements Closeable {
      */
     public float[] readFormattedChannels() throws IOException {
         byte[] bytes = adcInputStream.readChannels();
+        if(bytes == null) throw new EOFException("End of stream");
         float[] formatteddata = new float[bytes.length];
         for (int i = 0; i < bytes.length; i++) {
             formatteddata[i] = channels[i].formatData(bytes[i]);
         }
         return formatteddata;
-    }
-
-    public int available() throws IOException {
-        return adcInputStream.availableChannels();
     }
 
     @Override

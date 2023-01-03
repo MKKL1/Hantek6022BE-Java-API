@@ -8,6 +8,7 @@ import javax.usb.UsbInterface;
 import javax.usb.UsbIrp;
 import java.io.IOException;
 import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 
 public class BulkEndpoint extends Endpoint{
     public BulkEndpoint(UsbInterface usbInterface) {
@@ -15,24 +16,17 @@ public class BulkEndpoint extends Endpoint{
         if(usbEndpoint.getType() != UsbConst.ENDPOINT_TYPE_BULK) throw new RuntimeException("Endpoint is not of type bulk");
     }
 
-    @Override
-    public PipedInputStream asyncReadPipe(short size) throws UsbException, IOException {
+    public void asyncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException {
         if(!isPipeOpen) openPipe();
-        final PipedInputStream inputStream = new PipedInputStream();
-        UsbIrp irp = createReader(inputStream);
+        UsbIrp irp = createReader(outputStream);
         irp.setData(new byte[size]);
         pipe.asyncSubmit(irp);
-        return inputStream;
     }
 
-    @Override
-    public PipedInputStream syncReadPipe(short size) throws UsbException, IOException {
+    public void syncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException {
         if(!isPipeOpen) openPipe();
-        final PipedInputStream inputStream = new PipedInputStream();
-        UsbIrp irp = createReader(inputStream);
+        UsbIrp irp = createReader(outputStream);
         irp.setData(new byte[size]);
-        pipe.asyncSubmit(irp);
-        irp.waitUntilComplete();
-        return inputStream;
+        pipe.syncSubmit(irp);
     }
 }

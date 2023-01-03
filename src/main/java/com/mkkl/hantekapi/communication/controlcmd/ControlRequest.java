@@ -41,13 +41,6 @@ public class ControlRequest {
         return data;
     }
 
-    //TODO cleanup
-    public UsbControlIrp getUsbControlIrp(UsbDevice device) {
-        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
-        irp.setData(data);
-        irp.setLength(data.length);
-        return irp;
-    }
 
     public void write(UsbDevice device) throws UsbException {
         UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
