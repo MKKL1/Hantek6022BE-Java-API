@@ -1,121 +1,61 @@
 package com.mkkl.hantekapi.communication.adcdata;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
-import com.mkkl.hantekapi.communication.interfaces.ScopeInterface;
-import com.mkkl.hantekapi.communication.interfaces.SupportedInterfaces;
+import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
+import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
+import org.apache.commons.io.input.QueueInputStream;
+import org.apache.commons.io.output.QueueOutputStream;
 
-import javax.usb.UsbDevice;
 import javax.usb.UsbException;
 import java.io.IOException;
-import java.io.PipedOutputStream;
+import java.io.InputStream;
 
 public class ScopeDataReader implements AutoCloseable{
 
     private final Oscilloscope oscilloscope;
-    private final UsbDevice scopeDevice;
-    private final ScopeInterface scopeInterface;
     private boolean capture = false;
-    private boolean skipFirstPacket = true;
-    private boolean skipNextPacket = true;
+    private final QueueOutputStream queueOutputStream;
+    private final QueueInputStream queueInputStream;
+    private final Endpoint endpoint;
 
-    private final AdcInputStream adcInputStream;
-    private final PipedOutputStream pipedOutputStream;
-
-    public ScopeDataReader(Oscilloscope oscilloscope, SupportedInterfaces supportedInterfaces) throws UsbException, IOException {
+    public ScopeDataReader(Oscilloscope oscilloscope) throws UsbException {
         this.oscilloscope = oscilloscope;
-        scopeDevice = oscilloscope.getScopeDevice();
-        scopeInterface = new ScopeInterface(scopeDevice);
-        scopeInterface.setInterface(supportedInterfaces);
-        scopeInterface.claim();
-
-        pipedOutputStream = new PipedOutputStream();
-        adcInputStream = new AdcInputStream(pipedOutputStream,
-                scopeInterface.getEndpoint().getPacketSize(),
-                oscilloscope.getChannelManager().getChannelCount());
+        queueOutputStream = new QueueOutputStream();
+        queueInputStream = queueOutputStream.newQueueInputStream();
+        endpoint = oscilloscope.getScopeInterface().getEndpoint();
+        endpoint.openPipe();
     }
 
-    public ScopeDataReader(Oscilloscope oscilloscope) throws UsbException, IOException {
-        this(oscilloscope, SupportedInterfaces.BulkTransfer);
+    public void startCapture() {
+        oscilloscope.patch(HantekRequest.getStartRequest())
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to start capture", ex))
+                .onSuccess((v) -> capture = true);
     }
 
-    public AdcInputStream getAdcInputStream() {
-        return adcInputStream;
+    public void stopCapture() {
+        oscilloscope.patch(HantekRequest.getStopRequest())
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to stop capture", ex))
+                .onSuccess((v) -> capture = false);
+    }
+
+    public void syncRead(short size) throws IOException, UsbException {
+        endpoint.syncReadPipe(queueOutputStream, size);
+    }
+
+    //TODO return 'finished reading' event
+    public void asyncRead(short size) throws IOException, UsbException {
+        endpoint.asyncReadPipe(queueOutputStream, size);
+    }
+
+    public InputStream getInputStream() {
+        return queueInputStream;
     }
 
     @Override
-    public void close() throws UsbException, IOException {
-        if(capture) stopCapture();
-        scopeInterface.close();
-        adcInputStream.close();
-        pipedOutputStream.close();
+    public void close() throws Exception {
+        endpoint.close();
+        queueInputStream.close();
+        queueOutputStream.close();
     }
-
-
-    public void startCapture() throws UsbException {
-        capture = true;
-        if(skipFirstPacket) skipNextPacket = true;
-        HantekRequest.getStartRequest().write(scopeDevice);
-    }
-
-    public void stopCapture() throws UsbException {
-        capture = false;
-        HantekRequest.getStopRequest().write(scopeDevice);
-    }
-
-    public boolean isCapturing() {
-        return capture;
-    }
-
-    public void shouldSkipFirstPacket(boolean skipFirstPacket) {
-        this.skipFirstPacket = skipFirstPacket;
-        this.skipNextPacket = skipFirstPacket && skipNextPacket;
-    }
-
-    private void syncRead(short size) throws IOException, UsbException {
-        if(skipNextPacket)
-            size += scopeInterface.getEndpoint().getPacketSize();
-
-        scopeInterface.getEndpoint().syncReadPipe(pipedOutputStream, size);
-
-        if(skipNextPacket) {
-            adcInputStream.skipPacket();
-            skipNextPacket = false;
-        }
-    }
-
-    private void asyncRead(short size) throws IOException, UsbException {
-        if(skipNextPacket)
-            size += scopeInterface.getEndpoint().getPacketSize();
-
-        scopeInterface.getEndpoint().asyncReadPipe(pipedOutputStream, size);
-
-        if(skipNextPacket) {
-            adcInputStream.skipPacket();
-            skipNextPacket = false;
-        }
-    }
-
-    public void readDataFrame() throws UsbException, IOException {
-        readDataFrame((short) 0x400);
-    }
-
-    public void readDataFrame(short size) throws UsbException, IOException {
-        if(oscilloscope.getChannelManager().getActiveChannelCount() == 0) oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
-        if(!capture) startCapture();
-        syncRead(size);
-    }
-
-    public void asyncReadDataFrame() throws UsbException, IOException {
-        readDataFrame((short) 0x400);
-    }
-
-    public void asyncReadDataFrame(short size) throws UsbException, IOException {
-        if(oscilloscope.getChannelManager().getActiveChannelCount() == 0) oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
-        if(!capture) startCapture();
-        asyncRead(size);
-    }
-
-
 }

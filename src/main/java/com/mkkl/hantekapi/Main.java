@@ -2,6 +2,7 @@ package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.channel.Channels;
+import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.Scopes;
 import com.mkkl.hantekapi.constants.VoltageRange;
@@ -44,49 +45,50 @@ public class Main {
         oscilloscope.getChannel(Channels.CH1).setProbeMultiplier(10);
         oscilloscope.getChannel(Channels.CH2).setProbeMultiplier(10);
         //oscilloscope.setCalibrationFrequency(10000);
-
         //new CalibrateScope(oscilloscope).fastCalibration();
-        System.out.println(oscilloscope.getCurrentSampleRate().timeFromPointCount(512) + "s");
+//        System.out.println(oscilloscope.getCurrentSampleRate().timeFromPointCount(512) + "s");
 
 
 
-//        ScopeDataReader scopeDataReader = null;
-//        try {
-//            scopeDataReader = new ScopeDataReader(oscilloscope);
-//            CalibrateScope calibrateScope = new CalibrateScope(oscilloscope);
-//            calibrateScope.fastCalibration(scopeDataReader);
-//        } catch (UsbException | IOException e) {
-//            e.printStackTrace();
-//        } finally {
-//            try {
-//                writer.close();
-//                assert scopeDataReader != null;
-//                scopeDataReader.stopCapture();
-//                scopeDataReader.close();
-//            } catch (IOException | UsbException e) {
-//                e.printStackTrace();
-//            }
-//
-//        }
+        ScopeDataReader scopeDataReader = null;
+        try {
+            scopeDataReader = new ScopeDataReader(oscilloscope);
+            CalibrateScope calibrateScope = new CalibrateScope(oscilloscope);
+            calibrateScope.fastCalibration(scopeDataReader);
+        } catch (UsbException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                writer.close();
+                assert scopeDataReader != null;
+                scopeDataReader.stopCapture();
+                scopeDataReader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
+        }
 //        DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 //        df.setMaximumFractionDigits(340);
-//        float a = oscilloscope.getSampleRate().timeFromPointCount(512);
+//        float a = oscilloscope.getCurrentSampleRate().timeFromPointCount(512);
 //        float b = 0;
 //        int i = 0;
-//        FormattedDataStream input = null;
+//        AdcInputStream input = null;
 //        ScopeDataReader scopeDataReader = null;
 //        try {
 //            scopeDataReader = new ScopeDataReader(oscilloscope);
-//            input = new FormattedDataStream(scopeDataReader.getAdcInputStream(), oscilloscope.getChannelManager());
-//            scopeDataReader.readDataFrame();
-//            while(true) {
-//                //System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
-//                float[] f = input.readFormattedChannels();
-//                System.out.println(Arrays.toString(f));
-//                writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
-//                b += a;
-//                i++;
+//            input = new AdcInputStream(scopeDataReader.getInputStream(), oscilloscope);
+//            scopeDataReader.startCapture();
+//            for (int j = 0; j < 2; j++) {
+//                scopeDataReader.syncRead((short) 512);
+//                while (true) {
+//                    //System.out.print(Arrays.toString(input.readFormattedChannels()) + ",");
+//                    float[] f = input.readFormattedVoltages();
+//                    System.out.println(Arrays.toString(f));
+//                    writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
+//                    b += a;
+//                    i++;
+//                }
 //            }
 //
 //        } catch (UsbException | IOException e) {
@@ -98,7 +100,7 @@ public class Main {
 //                input.close();
 //                scopeDataReader.stopCapture();
 //                scopeDataReader.close();
-//            } catch (IOException | UsbException e) {
+//            } catch (Exception e) {
 //                e.printStackTrace();
 //            }
 //

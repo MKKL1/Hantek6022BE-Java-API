@@ -227,7 +227,7 @@ public class Oscilloscope implements AutoCloseable{
         return currentSampleRate;
     }
 
-    public ScopeDataReader createDataReader() {
+    public ScopeDataReader createDataReader() throws UsbException {
         return new ScopeDataReader(this);
     }
 

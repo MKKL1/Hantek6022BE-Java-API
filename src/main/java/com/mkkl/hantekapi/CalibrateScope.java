@@ -24,23 +24,22 @@ public class CalibrateScope {
         HashMap<VoltageRange, Byte> offsets1 = new HashMap<>();
         HashMap<VoltageRange, Byte> offsets1_hs = new HashMap<>();
         HashMap<VoltageRange, Byte> offsets2 = new HashMap<>();
-        reader.shouldSkipFirstPacket(false);
         try {
-            reader.startCapture();
             for (VoltageRange voltageRange : VoltageRange.values()) {
                 oscilloscope.getChannel(Channels.CH1).setVoltageRange(voltageRange);
                 oscilloscope.getChannel(Channels.CH2).setVoltageRange(voltageRange);
                 oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
                 Thread.sleep(100);
                 System.out.println("Low speed " + voltageRange.name());
-                byte[] lowspeed = ScopeUtils.readAverages(oscilloscope, reader, (short) 256, 1);
+                byte[] lowspeed = ScopeUtils.readRawAverages(oscilloscope, reader, (short) 1024, 5);
                 offsets1.put(voltageRange, lowspeed[0]);
                 offsets2.put(voltageRange, lowspeed[1]);
 
+                Thread.sleep(100);
                 oscilloscope.setSampleRate(SampleRates.SAMPLES_30MS_s);
                 Thread.sleep(100);
                 System.out.println("High speed " + voltageRange.name());
-                offsets1_hs.put(voltageRange, ScopeUtils.readAverages(oscilloscope, reader, (short) 256, 1)[0]);
+                offsets1_hs.put(voltageRange, ScopeUtils.readRawAverages(oscilloscope, reader, (short) 1024, 5)[0]);
             }
             System.out.println(offsets1);
             System.out.println(offsets2);
@@ -50,11 +49,7 @@ public class CalibrateScope {
             e.printStackTrace();
             return false;
         } finally {
-            try {
-                reader.stopCapture();
-            } catch (UsbException e) {
-                e.printStackTrace();
-            }
+            reader.stopCapture();
         }
     }
 

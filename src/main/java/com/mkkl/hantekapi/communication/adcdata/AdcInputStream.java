@@ -1,5 +1,6 @@
 package com.mkkl.hantekapi.communication.adcdata;
 
+import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 
@@ -26,6 +27,10 @@ public class AdcInputStream extends FilterInputStream{
         this.channelManager = channelManager;
         this.channels = channelManager.getChannels();
         this.packetSize = packetSize;
+    }
+
+    public AdcInputStream(InputStream in, Oscilloscope oscilloscope) {
+        this(in, oscilloscope.getChannelManager(), oscilloscope.getScopeInterface().getEndpoint().getPacketSize());
     }
 
     public byte[] readRawVoltages() throws IOException {

@@ -75,8 +75,12 @@ public abstract class Endpoint {
         isPipeOpen = true;
     }
 
-    public void close() throws UsbException {
+    public void closePipe() throws UsbException {
         pipe.close();
         isPipeOpen = false;
+    }
+
+    public void close() throws UsbException {
+        closePipe();
     }
 }
