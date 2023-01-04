@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi.communication.controlcmd;
+package com.mkkl.hantekapi.communication.controlcmd.response;
 
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.constants.VoltageRange;

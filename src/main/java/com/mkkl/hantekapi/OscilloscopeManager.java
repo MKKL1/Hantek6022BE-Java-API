@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.constants.Scopes;
+import com.mkkl.hantekapi.exceptions.ScopeNotFoundException;
 
 import javax.usb.*;
 import java.util.HashMap;

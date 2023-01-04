@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.exceptions;
 
 //TODO should be checked exception
 public class ScopeNotFoundException extends OscilloscopeException {

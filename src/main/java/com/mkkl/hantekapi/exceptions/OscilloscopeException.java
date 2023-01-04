@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.exceptions;
 
 public class OscilloscopeException extends RuntimeException {
     public OscilloscopeException() {

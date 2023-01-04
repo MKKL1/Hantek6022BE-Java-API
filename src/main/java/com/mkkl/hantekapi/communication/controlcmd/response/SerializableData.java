@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi.communication.controlcmd;
+package com.mkkl.hantekapi.communication.controlcmd.response;
 
 import java.io.IOException;
 

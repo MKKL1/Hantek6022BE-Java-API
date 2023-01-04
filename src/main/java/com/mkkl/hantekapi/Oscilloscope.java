@@ -5,9 +5,19 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
+import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.*;
+import com.mkkl.hantekapi.communication.controlcmd.response.CalibrationData;
+import com.mkkl.hantekapi.communication.controlcmd.response.ControlResponse;
+import com.mkkl.hantekapi.communication.controlcmd.response.SerializableData;
+import com.mkkl.hantekapi.communication.Serialization;
+import com.mkkl.hantekapi.communication.interfaces.ScopeInterface;
+import com.mkkl.hantekapi.communication.interfaces.SupportedInterfaces;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.Scopes;
+import com.mkkl.hantekapi.exceptions.DeviceNotInitialized;
+import com.mkkl.hantekapi.exceptions.OscilloscopeException;
+import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
 import com.mkkl.hantekapi.firmware.FirmwareReader;
 import com.mkkl.hantekapi.firmware.ScopeFirmware;
@@ -15,17 +25,17 @@ import com.mkkl.hantekapi.firmware.SupportedFirmwares;
 
 import javax.usb.*;
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
 
-public class Oscilloscope {
+public class Oscilloscope implements AutoCloseable{
     private ChannelManager channelManager;
-    private final boolean firmwarePresent;
     private SampleRates currentSampleRate;
+    private ScopeInterface scopeInterface;
     private final UsbDevice scopeDevice;
     private boolean deviceSetup = false;
+    private final boolean firmwarePresent;
 
     private Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
         this.scopeDevice = usbDevice;
@@ -40,10 +50,20 @@ public class Oscilloscope {
         return new Oscilloscope(usbDevice, firmwarePresent);
     }
 
-    public Oscilloscope setup() throws UsbException {
-        //TODO not sure this is the right way
-        channelManager = ChannelManager.create(this);
-        deviceSetup = true;
+    public Oscilloscope setup() {
+        return setup(SupportedInterfaces.BulkTransfer);
+    }
+
+    public Oscilloscope setup(SupportedInterfaces supportedInterfaces) {
+        try {
+            channelManager = ChannelManager.create(this);
+            scopeInterface = new ScopeInterface(scopeDevice);
+            scopeInterface.setInterface(supportedInterfaces);
+            scopeInterface.claim();
+            deviceSetup = true;
+        } catch (UsbException e) {
+            throw new UncheckedUsbException(e);
+        }
         return this;
     }
 
@@ -58,13 +78,14 @@ public class Oscilloscope {
         return new ControlResponse<>(bytes, e);
     }
 
+    //TODO catch all exceptions
     public <T extends SerializableData> ControlResponse<T> request(final ControlRequest controlRequest, final Class<T> clazz) {
         ControlResponse<byte[]> rawResponse = request(controlRequest);
         Exception e = null;
         T body = null;
         try {
             rawResponse.onFailureThrow();
-            body = deserialize(rawResponse.get(), clazz);
+            body = Serialization.deserialize(rawResponse.get(), clazz);
         } catch (Exception _e) {
             e = _e;
         }
@@ -82,34 +103,31 @@ public class Oscilloscope {
         return new ControlResponse<>(null, e);
     }
 
-    public void setActiveChannels(ActiveChannels activeChannels) throws UsbException {
+    public void setActiveChannels(ActiveChannels activeChannels) {
         if(!deviceSetup) throw new DeviceNotInitialized();
-        channelManager.setActiveChannelCount(activeChannels.getActiveCount());
-        HantekRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()).write(scopeDevice);
+        patch(HantekRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()))
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set active channels ", ex))
+                .onSuccess((v) -> channelManager.setActiveChannelCount(activeChannels.getActiveCount()));
     }
 
-    public void setSampleRate(SampleRates sampleRates) throws UsbException {
-        currentSampleRate = sampleRates;
-        HantekRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()).write(scopeDevice);
+    public void setSampleRate(SampleRates sampleRates) {
+        patch(HantekRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()))
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set sample rate",ex))
+                .onSuccess((v) -> currentSampleRate = sampleRates);
     }
-
-    public SampleRates getSampleRate() {
-        return currentSampleRate;
-    }
-
 
     public CalibrationData readCalibrationValues() {
         if(!deviceSetup) throw new DeviceNotInitialized();
         ControlResponse<CalibrationData> r = request(
                     HantekRequest.getEepromReadRequest(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, (short) 80), CalibrationData.class)
-                .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to read calibration data", ex));
         return r.get();
     }
 
     public void writeCalibrationValues(CalibrationData calibrationData) {
         byte[] data = null;
         try {
-            data = serialize(calibrationData);
+            data = Serialization.serialize(calibrationData);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -117,46 +135,37 @@ public class Oscilloscope {
                 .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
     }
 
-    public <T extends SerializableData> byte[] serialize(T serializableObject) throws IOException {
-        return serializableObject.serialize();
-    }
-
-    //TODO exceptions
-    public <T extends SerializableData> T deserialize(byte[] serializableData, final Class<T> tClass)
-            throws IOException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
-    {
-        T instance = tClass.getDeclaredConstructor().newInstance();
-        instance.deserialize(serializableData);
-        return instance;
-    }
-
     public void setCalibration(CalibrationData calibrationData) {
         channelManager.setCalibration(calibrationData);
     }
 
-//
-//    public byte[] read_eeprom(short offset, short length) throws UsbException {
-//        return HantekRequest.getEepromReadRequest(offset, new byte[length]).read(scopeDevice);
-//    }
-//
-//    public void write_eeprom(short offset, byte[] data) throws UsbException {
-//        HantekRequest.getEepromWriteRequest(offset, data).write(scopeDevice);
-//    }
+    public ControlResponse<byte[]> readEeprom(short offset, short length) {
+        return request(HantekRequest.getEepromReadRequest(offset, length));
+    }
 
-    public void flash_firmware() throws IOException, UsbException {
+    public ControlResponse<Void> writeEeprom(short offset, byte[] data) {
+        return patch(HantekRequest.getEepromWriteRequest(offset, data));
+    }
+
+    public void flash_firmware() {
         flash_firmware(Arrays.stream(Scopes.values())
                 .filter(x -> x.getProductId() == scopeDevice.getUsbDeviceDescriptor().idProduct())
                 .findFirst()
                 .orElseThrow());
     }
 
-    public void flash_firmware(Scopes scope) throws IOException, UsbException {
+    public void flash_firmware(Scopes scope) {
         flash_firmware(scope.getFirmwareToFlash());
     }
 
-    public void flash_firmware(SupportedFirmwares supportedFirmwares) throws IOException, UsbException {
-        InputStream firmwareInputStream = getClass().getClassLoader().getResourceAsStream(supportedFirmwares.getFilename());
-        flash_firmware(firmwareInputStream);
+    public void flash_firmware(SupportedFirmwares supportedFirmwares) {
+        try(InputStream firmwareInputStream = getClass().getClassLoader().getResourceAsStream(supportedFirmwares.getFilename())) {
+            flash_firmware(firmwareInputStream);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } catch (UsbException e) {
+            throw new UncheckedUsbException(e);
+        }
     }
 
     public void flash_firmware(InputStream firmwareInputStream) throws IOException, UsbException {
@@ -167,19 +176,19 @@ public class Oscilloscope {
     }
 
     public void flash_firmware(ScopeFirmware firmware) throws UsbException {
-        for(FirmwareControlPacket packet : firmware.getFirmwareData()) {
-            HantekRequest.getFirmwareRequest(packet.address(), packet.data()).write(scopeDevice);
-        }
+        for(FirmwareControlPacket packet : firmware.getFirmwareData())
+            patch(HantekRequest.getFirmwareRequest(packet.address(), packet.data())).onFailureThrow((e) -> (UsbException)e);
     }
 
     public void setCalibrationFrequency(int frequency) {
-        if(frequency<32 || frequency>100000) throw new RuntimeException("Unsupported frequency of " + frequency);
+        if(frequency<32 || frequency>100000) throw new OscilloscopeException("Unsupported frequency of " + frequency);
         byte bytefreq;
         if (frequency < 1000) bytefreq = (byte) ((frequency/10)+100);
         else if (frequency < 5600) bytefreq = (byte) ((frequency/100)+200);
         else bytefreq = (byte) (frequency/1000);
 
-        patch(HantekRequest.getCalibrationFreqSetRequest(bytefreq)).onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
+        patch(HantekRequest.getCalibrationFreqSetRequest(bytefreq))
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set calibration frequency", ex));
     }
 
     //TODO Copied for easier access
@@ -206,12 +215,25 @@ public class Oscilloscope {
         return firmwarePresent;
     }
 
+    public ScopeInterface getScopeInterface() {
+        return scopeInterface;
+    }
+
     public UsbDevice getScopeDevice() {
         return scopeDevice;
     }
 
     public SampleRates getCurrentSampleRate() {
         return currentSampleRate;
+    }
+
+    public ScopeDataReader createDataReader() {
+        return new ScopeDataReader(this);
+    }
+
+    @Override
+    public void close() throws Exception {
+        scopeInterface.close();
     }
 
     @Override

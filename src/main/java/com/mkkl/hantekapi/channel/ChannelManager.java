@@ -1,9 +1,8 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.communication.controlcmd.CalibrationData;
+import com.mkkl.hantekapi.communication.controlcmd.response.CalibrationData;
 
-import javax.usb.UsbException;
 import java.util.ArrayList;
 
 /**

@@ -1,6 +1,5 @@
-package com.mkkl.hantekapi.communication.controlcmd;
+package com.mkkl.hantekapi.communication.controlcmd.response;
 
-import javax.usb.UsbException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -15,13 +14,13 @@ public class ControlResponse <T> {
         this.ex = ex;
     }
 
-    public ControlResponse<T> onFailure(Consumer<Exception> consumer) {
-        if(ex != null) consumer.accept(ex);
+    public ControlResponse<T> onFailure(Consumer<Exception> exceptionConsumer) {
+        if(ex != null) exceptionConsumer.accept(ex);
         return this;
     }
 
-    public ControlResponse<T> onSuccess(Consumer<T> consumer) {
-        if(ex == null) consumer.accept(responseBody);
+    public ControlResponse<T> onSuccess(Consumer<T> bodyConsumer) {
+        if(ex == null) bodyConsumer.accept(responseBody);
         return this;
     }
 
