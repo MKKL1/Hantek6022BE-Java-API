@@ -5,6 +5,7 @@ import javax.usb.event.UsbPipeDataEvent;
 import javax.usb.event.UsbPipeErrorEvent;
 import javax.usb.event.UsbPipeListener;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 
@@ -27,7 +28,7 @@ public abstract class Endpoint {
     }
 
     //TODO close outputstream
-    protected synchronized UsbIrp createReader(PipedOutputStream outputStream) throws UsbException, IOException {
+    protected synchronized UsbIrp createAsyncReader(OutputStream outputStream) throws UsbException, IOException {
         UsbIrp irp = pipe.createUsbIrp();
         pipe.addUsbPipeListener(new UsbPipeListener() {
             @Override
@@ -49,9 +50,9 @@ public abstract class Endpoint {
         return irp;
     }
 
-    public abstract void asyncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException;
+    public abstract void asyncReadPipe(OutputStream outputStream, short size) throws UsbException, IOException;
 
-    public abstract void syncReadPipe(PipedOutputStream outputStream, short size) throws UsbException, IOException;
+    public abstract void syncReadPipe(OutputStream outputStream, short size) throws UsbException, IOException;
 
     public UsbEndpoint getUsbEndpoint() {
         return usbEndpoint;
