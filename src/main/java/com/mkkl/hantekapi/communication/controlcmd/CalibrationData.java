@@ -4,19 +4,16 @@ import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import java.io.IOException;
-import java.io.ObjectStreamException;
-import java.io.Serial;
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Objects;
 
-public class CalibrationData implements Serializable {
+public class CalibrationData extends SerializableData {
     public HashMap<CalibrationKey, Byte> offsets;
     public HashMap<CalibrationKey, Byte> offsets_extended;
     public HashMap<CalibrationKey, Byte> gains;
 
-    public byte getOffset(Channels channelId, VoltageRange voltageRange, boolean lowspeed){
-        return offsets.get(new CalibrationKey(channelId.getChannelId(), lowspeed, voltageRange));
+    public int getOffset(Channels channelId, VoltageRange voltageRange, boolean lowspeed){
+        return offsets.get(new CalibrationKey(channelId.getChannelId(), lowspeed, voltageRange)) + 128;
     }
 
     public byte getRawExtendedOffset(Channels channelId, VoltageRange voltageRange, boolean lowspeed){
@@ -44,7 +41,7 @@ public class CalibrationData implements Serializable {
     public HashMap<VoltageRange, Float> getOffsets(Channels channelId) {
         HashMap<VoltageRange, Float> map = new HashMap<>();
         for(VoltageRange voltageRange: VoltageRange.values())
-            map.put(voltageRange, getOffset(channelId, voltageRange, true) + getFormattedExtOffset(channelId, voltageRange, true));
+            map.put(voltageRange, getFormattedExtOffset(channelId, voltageRange, true));
         return map;
     }
 
@@ -55,8 +52,8 @@ public class CalibrationData implements Serializable {
         return map;
     }
 
-    @Serial
-    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+    @Override
+    public byte[] serialize() throws IOException{
         byte[] calibrationRaw = new byte[80];
         for (VoltageRange v: VoltageRange.values())
             for(int i = 0; i < 2; i++)
@@ -77,45 +74,34 @@ public class CalibrationData implements Serializable {
         for (VoltageRange v: VoltageRange.values())
             for(int i = 0; i < 2; i++)
                 calibrationRaw[i+64 + v.getEepromOffset()] = offsets_extended.get(new CalibrationKey(i, false, v));
-
-        out.write(calibrationRaw);
+        return calibrationRaw;
     }
 
-    @Serial
-    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+    @Override
+    public void deserialize(byte[] data) throws IOException {
         offsets = new HashMap<>();
         offsets_extended = new HashMap<>();
         gains = new HashMap<>();
-        byte[] calibrationRaw = in.readAllBytes();
-        if(calibrationRaw.length < 80) throw new ClassNotFoundException("Failed to serialize calibration data (data too short)");
-        for (VoltageRange v: VoltageRange.values()) {
-            offsets.put(new CalibrationKey(0, true, v), calibrationRaw[v.getEepromOffset()]);
-            offsets.put(new CalibrationKey(1, true, v), calibrationRaw[1 + v.getEepromOffset()]);
-        }
+        if(data.length < 80) throw new IOException("Failed to serialize calibration data (data too short)");
+        for (VoltageRange v: VoltageRange.values())
+            for(int i = 0; i < 2; i++)
+                offsets.put(new CalibrationKey(i, true, v), data[i+v.getEepromOffset()]);
 
-        for (VoltageRange v: VoltageRange.values()) {
-            offsets.put(new CalibrationKey(0, false, v), calibrationRaw[16 + v.getEepromOffset()]);
-            offsets.put(new CalibrationKey(1, false, v), calibrationRaw[17 + v.getEepromOffset()]);
-        }
+        for (VoltageRange v: VoltageRange.values())
+            for(int i = 0; i < 2; i++)
+                offsets.put(new CalibrationKey(i, false, v), data[16 + i + v.getEepromOffset()]);
 
-        for (VoltageRange v: VoltageRange.values()) {
-            gains.put(new CalibrationKey(0, true, v), calibrationRaw[32 + v.getEepromGain()]);
-            gains.put(new CalibrationKey(1, true, v), calibrationRaw[33 + v.getEepromGain()]);
-        }
+        for (VoltageRange v: VoltageRange.values())
+            for(int i = 0; i < 2; i++)
+                gains.put(new CalibrationKey(i, true, v), data[32 + i + v.getEepromGain()]);
 
-        for (VoltageRange v: VoltageRange.values()) {
-            offsets_extended.put(new CalibrationKey(0, true, v), calibrationRaw[48 + v.getEepromOffset()]);
-            offsets_extended.put(new CalibrationKey(1, true, v), calibrationRaw[49 + v.getEepromOffset()]);
-        }
+        for (VoltageRange v: VoltageRange.values())
+            for(int i = 0; i < 2; i++)
+                offsets_extended.put(new CalibrationKey(i, true, v), data[48 + i + v.getEepromOffset()]);
 
-        for (VoltageRange v: VoltageRange.values()) {
-            offsets_extended.put(new CalibrationKey(0, false, v), calibrationRaw[64 + v.getEepromOffset()]);
-            offsets_extended.put(new CalibrationKey(1, false, v), calibrationRaw[65 + v.getEepromOffset()]);
-        }
-    }
-
-    private void readObjectNoData() throws ObjectStreamException {
-
+        for (VoltageRange v: VoltageRange.values())
+            for(int i = 0; i < 2; i++)
+                offsets_extended.put(new CalibrationKey(i, false, v), data[64 + i + v.getEepromOffset()]);
     }
 }
 

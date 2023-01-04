@@ -32,7 +32,7 @@ public class ScopeChannel {
     private float current_gain;
     private float current_scale_factor = 1;
 
-    private VoltageRange currentVoltageRange;
+    private VoltageRange currentVoltageRange = VoltageRange.RANGE5000mV;
     private int probeMultiplier = 1;
     private float additionalOffset = 0;
 

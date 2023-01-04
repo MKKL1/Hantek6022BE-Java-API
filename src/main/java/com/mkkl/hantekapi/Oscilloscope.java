@@ -5,24 +5,19 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
-import com.mkkl.hantekapi.communication.controlcmd.CalibrationData;
-import com.mkkl.hantekapi.communication.controlcmd.ControlRequest;
-import com.mkkl.hantekapi.communication.controlcmd.ControlResponse;
+import com.mkkl.hantekapi.communication.controlcmd.*;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.Scopes;
-import com.mkkl.hantekapi.constants.VoltageRange;
-import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
 import com.mkkl.hantekapi.firmware.FirmwareReader;
 import com.mkkl.hantekapi.firmware.ScopeFirmware;
 import com.mkkl.hantekapi.firmware.SupportedFirmwares;
-import org.apache.commons.lang3.ArrayUtils;
 
 import javax.usb.*;
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HexFormat;
 
 public class Oscilloscope {
@@ -52,7 +47,7 @@ public class Oscilloscope {
         return this;
     }
 
-    public ControlResponse<byte[]> rawRequest(final ControlRequest controlRequest) {
+    public ControlResponse<byte[]> request(final ControlRequest controlRequest) {
         byte[] bytes = null;
         UsbException e = null;
         try {
@@ -63,15 +58,13 @@ public class Oscilloscope {
         return new ControlResponse<>(bytes, e);
     }
 
-    //TODO make giving class obligatory to avoid using wrong method
-    public <T extends Serializable> ControlResponse<T> request(final ControlRequest controlRequest) {
-        ControlResponse<byte[]> rawResponse = rawRequest(controlRequest);
+    public <T extends SerializableData> ControlResponse<T> request(final ControlRequest controlRequest, final Class<T> clazz) {
+        ControlResponse<byte[]> rawResponse = request(controlRequest);
         Exception e = null;
         T body = null;
         try {
             rawResponse.onFailureThrow();
-            ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(rawResponse.get()));
-            body = (T)in.readObject();
+            body = deserialize(rawResponse.get(), clazz);
         } catch (Exception _e) {
             e = _e;
         }
@@ -107,23 +100,34 @@ public class Oscilloscope {
 
     public CalibrationData readCalibrationValues() {
         if(!deviceSetup) throw new DeviceNotInitialized();
-        CalibrationData calibrationData = (CalibrationData) request(
-                    HantekRequest.getEepromReadRequest(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, (short) 80))
-                .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()))
-                .get();
-        return calibrationData;
+        ControlResponse<CalibrationData> r = request(
+                    HantekRequest.getEepromReadRequest(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, (short) 80), CalibrationData.class)
+                .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
+        return r.get();
     }
 
     public void writeCalibrationValues(CalibrationData calibrationData) {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        byte[] data = null;
         try {
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
-            objectOutputStream.writeObject(calibrationData);
+            data = serialize(calibrationData);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        patch(HantekRequest.getEepromWriteRequest(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, byteArrayOutputStream.toByteArray()))
+        patch(HantekRequest.getEepromWriteRequest(UsbConnectionConst.CALIBRATION_EEPROM_OFFSET, data))
                 .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
+    }
+
+    public <T extends SerializableData> byte[] serialize(T serializableObject) throws IOException {
+        return serializableObject.serialize();
+    }
+
+    //TODO exceptions
+    public <T extends SerializableData> T deserialize(byte[] serializableData, final Class<T> tClass)
+            throws IOException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
+    {
+        T instance = tClass.getDeclaredConstructor().newInstance();
+        instance.deserialize(serializableData);
+        return instance;
     }
 
     public void setCalibration(CalibrationData calibrationData) {
@@ -168,14 +172,14 @@ public class Oscilloscope {
         }
     }
 
-    public void setCalibrationFrequency(int frequency) throws UsbException {
+    public void setCalibrationFrequency(int frequency) {
         if(frequency<32 || frequency>100000) throw new RuntimeException("Unsupported frequency of " + frequency);
         byte bytefreq;
         if (frequency < 1000) bytefreq = (byte) ((frequency/10)+100);
         else if (frequency < 5600) bytefreq = (byte) ((frequency/100)+200);
         else bytefreq = (byte) (frequency/1000);
 
-        HantekRequest.getCalibrationFreqSetRequest(bytefreq).write(scopeDevice);
+        patch(HantekRequest.getCalibrationFreqSetRequest(bytefreq)).onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
     }
 
     //TODO Copied for easier access

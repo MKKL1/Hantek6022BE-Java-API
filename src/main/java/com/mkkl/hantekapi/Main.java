@@ -1,9 +1,13 @@
 package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.ActiveChannels;
+import com.mkkl.hantekapi.communication.UsbConnectionConst;
 import com.mkkl.hantekapi.communication.adcdata.FormattedDataStream;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
+import com.mkkl.hantekapi.communication.controlcmd.CalibrationData;
+import com.mkkl.hantekapi.communication.controlcmd.ControlRequest;
+import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.communication.interfaces.SupportedInterfaces;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.Scopes;
@@ -41,7 +45,7 @@ public class Main {
             oscilloscope.setup();
             oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
             oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
-            //oscilloscope.getCalibrationValues();
+            oscilloscope.setCalibration(oscilloscope.readCalibrationValues());
             oscilloscope.getChannel(Channels.CH1).setVoltageRange(VoltageRange.RANGE5000mV);
             oscilloscope.getChannel(Channels.CH2).setVoltageRange(VoltageRange.RANGE5000mV);
             oscilloscope.getChannel(Channels.CH1).setProbeMultiplier(10);
@@ -56,24 +60,24 @@ public class Main {
 
         assert oscilloscope != null;
 
-        ScopeDataReader scopeDataReader = null;
-        try {
-            scopeDataReader = new ScopeDataReader(oscilloscope);
-            CalibrateScope calibrateScope = new CalibrateScope(oscilloscope);
-            calibrateScope.fastCalibration(scopeDataReader);
-        } catch (UsbException | IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                writer.close();
-                assert scopeDataReader != null;
-                scopeDataReader.stopCapture();
-                scopeDataReader.close();
-            } catch (IOException | UsbException e) {
-                e.printStackTrace();
-            }
-
-        }
+//        ScopeDataReader scopeDataReader = null;
+//        try {
+//            scopeDataReader = new ScopeDataReader(oscilloscope);
+//            CalibrateScope calibrateScope = new CalibrateScope(oscilloscope);
+//            calibrateScope.fastCalibration(scopeDataReader);
+//        } catch (UsbException | IOException e) {
+//            e.printStackTrace();
+//        } finally {
+//            try {
+//                writer.close();
+//                assert scopeDataReader != null;
+//                scopeDataReader.stopCapture();
+//                scopeDataReader.close();
+//            } catch (IOException | UsbException e) {
+//                e.printStackTrace();
+//            }
+//
+//        }
 
 //        DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 //        df.setMaximumFractionDigits(340);

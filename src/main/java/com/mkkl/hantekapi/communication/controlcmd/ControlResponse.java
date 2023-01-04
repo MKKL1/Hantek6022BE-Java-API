@@ -26,16 +26,18 @@ public class ControlResponse <T> {
     }
 
     public <X extends Throwable> ControlResponse<T> onFailureThrow(Function<Exception, ? extends X> function) throws X{
-        if(ex != null) function.apply(ex);
+        if(ex != null) throw function.apply(ex);
         return this;
     }
 
-    public <X extends Throwable> void onFailureThrow(Supplier<? extends X> exceptionSupplier) throws X{
+    public <X extends Throwable> ControlResponse<T> onFailureThrow(Supplier<? extends X> exceptionSupplier) throws X{
         if (ex != null) throw exceptionSupplier.get();
+        return this;
     }
 
-    public void onFailureThrow() throws Exception {
+    public ControlResponse<T> onFailureThrow() throws Exception {
         if(ex != null) throw ex;
+        return this;
     }
 
     public Exception getException() {
