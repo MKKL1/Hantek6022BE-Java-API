@@ -1,40 +1,71 @@
 package com.mkkl.hantekapi.communication.adcdata;
 
+import com.mkkl.hantekapi.channel.ChannelManager;
+import com.mkkl.hantekapi.channel.ScopeChannel;
+
 import java.io.*;
+import java.util.ArrayList;
 
-//TODO PipedInputStream can be replaced with BlockingQueue
+public class AdcInputStream extends FilterInputStream{
 
-/**
- * Basic input stream for data from oscilloscope.
- * It is used to divide data to chunks of length {@link #channelcount}
- */
-public class AdcInputStream extends PipedInputStream{
-
-    final int packetsize;
-    final int channelcount;
-
-    public AdcInputStream(PipedOutputStream src, int packetsize, int channelcount) throws IOException {
-        super(src);
-        this.packetsize = packetsize;
-        this.channelcount = channelcount;
-    }
-
+    private final ChannelManager channelManager;
+    private final ArrayList<ScopeChannel> channels;
+    private final int packetSize;
     /**
-     * Reads n bytes from stream where n {@link AdcInputStream#channelcount} given in constructor
-     * @return Byte array of data where each column is raw data for channel of id by ascending order eg. [channel0data, channel1data]
-     * @throws IOException {@link #read()}
+     * Creates a {@code FilterInputStream}
+     * by assigning the  argument {@code in}
+     * to the field {@code this.in} so as
+     * to remember it for later use.
+     *  @param in the underlying input stream, or {@code null} if
+     *           this instance is to be created without an underlying stream.
+     * @param channelManager
+     * @param packetSize
      */
-
-    public byte[] readChannels() throws IOException {
-        byte[] bytes = new byte[channelcount];
-        for (int i = 0; i < channelcount; i++) {
-            int b = read();
-            if (b == -1) return null;
-            bytes[i] = (byte)b;
-        }
-        return bytes;
+    public AdcInputStream(InputStream in, ChannelManager channelManager, int packetSize) {
+        super(in);
+        this.channelManager = channelManager;
+        this.channels = channelManager.getChannels();
+        this.packetSize = packetSize;
     }
+
+    public byte[] readRawVoltages() throws IOException {
+        int ch1 = read();
+        int ch2 = read();
+        if((ch1 | ch2) < 0)
+            throw new EOFException();
+        return new byte[] {(byte) ch1, (byte) ch2};
+    }
+
     public void skipPacket() throws IOException {
-        skipNBytes(packetsize);
+        skipNBytes(packetSize);
+    }
+
+    public float[] readFormattedVoltages() throws IOException {
+        byte[] rawdata = readRawVoltages();
+        float[] fdata = new float[2];
+        for (int i = 0; i < 2; i++)
+            fdata[i] = channels.get(i).formatData(rawdata[i]);
+        return fdata;
+    }
+
+    public void readToChannels() throws IOException {
+        float[] fdata = readFormattedVoltages();
+        for (int i = 0; i < 2; i++) {
+            channels.get(i).currentData = fdata[i];
+        }
+    }
+
+    public byte[][] readNRawVoltages(int n) throws IOException {
+        byte[][] data = new byte[n][2];
+        for (int i = 0; i < n; i++)
+            data[i] = readRawVoltages();
+        return data;
+    }
+
+    public float[][] readNFormattedVoltages(int n) throws IOException {
+        float[][] data = new float[n][2];
+        for (int i = 0; i < n; i++)
+            data[i] = readFormattedVoltages();
+        return data;
     }
 }
