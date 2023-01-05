@@ -107,13 +107,13 @@ public class Oscilloscope implements AutoCloseable{
         if(!deviceSetup) throw new DeviceNotInitialized();
         patch(HantekRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()))
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set active channels ", ex))
-                .onSuccess((v) -> channelManager.setActiveChannelCount(activeChannels.getActiveCount()));
+                .onSuccess(() -> channelManager.setActiveChannelCount(activeChannels.getActiveCount()));
     }
 
     public void setSampleRate(SampleRates sampleRates) {
         patch(HantekRequest.getSampleRateSetRequest(sampleRates.getSampleRateId()))
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set sample rate",ex))
-                .onSuccess((v) -> currentSampleRate = sampleRates);
+                .onSuccess(() -> currentSampleRate = sampleRates);
     }
 
     public CalibrationData readCalibrationValues() {

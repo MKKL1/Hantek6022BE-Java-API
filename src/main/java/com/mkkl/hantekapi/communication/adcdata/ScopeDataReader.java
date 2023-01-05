@@ -30,13 +30,13 @@ public class ScopeDataReader implements AutoCloseable{
     public void startCapture() {
         oscilloscope.patch(HantekRequest.getStartRequest())
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to start capture", ex))
-                .onSuccess((v) -> capture = true);
+                .onSuccess(() -> capture = true);
     }
 
     public void stopCapture() {
         oscilloscope.patch(HantekRequest.getStopRequest())
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to stop capture", ex))
-                .onSuccess((v) -> capture = false);
+                .onSuccess(() -> capture = false);
     }
 
     public void syncRead(short size) throws IOException, UsbException {

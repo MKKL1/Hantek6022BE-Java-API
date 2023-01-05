@@ -24,6 +24,11 @@ public class ControlResponse <T> {
         return this;
     }
 
+    public ControlResponse<T> onSuccess(Runnable runnable) {
+        if(ex == null) runnable.run();
+        return this;
+    }
+
     public <X extends Throwable> ControlResponse<T> onFailureThrow(Function<Exception, ? extends X> function) throws X{
         if(ex != null) throw function.apply(ex);
         return this;
