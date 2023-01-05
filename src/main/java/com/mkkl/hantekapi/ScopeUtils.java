@@ -14,7 +14,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class ScopeUtils {
-    public static byte[] readRawAverages(Oscilloscope oscilloscope, ScopeDataReader reader, short size, int repeat) throws UsbException, InterruptedException, IOException {
+    public static float[] readRawAverages(Oscilloscope oscilloscope, ScopeDataReader reader, short size, int repeat) throws UsbException, InterruptedException, IOException {
         final boolean single = oscilloscope.getCurrentSampleRate().isSingleChannel();
         if(single) oscilloscope.setActiveChannels(ActiveChannels.CH1);
         else oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
@@ -28,7 +28,6 @@ public class ScopeUtils {
                 reader.syncRead(size);
                 while (true) {
                     byte[] data = adcInputStream.readRawVoltages();
-                    System.out.print(Arrays.toString(data));
                     channel1Data.add(data[0]);
                     if (!single) channel2Data.add(data[1]);
                 }
@@ -36,14 +35,13 @@ public class ScopeUtils {
                 //END
             }
             reader.stopCapture();
-            System.out.println("");
             Thread.sleep(100);
         }
-        return new byte[] {channel1Data.size() != 0 ? (byte) (channel1Data.stream().mapToInt(Byte::intValue).sum()/channel1Data.size()) : 0,
-                            channel2Data.size() != 0 ? (byte) (channel2Data.stream().mapToInt(Byte::intValue).sum()/channel2Data.size()) : 0};
+        return new float[] {channel1Data.size() != 0 ? (channel1Data.stream().mapToInt(Byte::intValue).sum()/(float)channel1Data.size()) : 0f,
+                            channel2Data.size() != 0 ? (channel2Data.stream().mapToInt(Byte::intValue).sum()/(float)channel2Data.size()) : 0f};
     }
 
-    public static byte[] readRawAverages(Oscilloscope oscilloscope, short size, int repeat) throws Exception {
+    public static float[] readRawAverages(Oscilloscope oscilloscope, short size, int repeat) throws Exception {
         try(ScopeDataReader reader = new ScopeDataReader(oscilloscope)) {
             return readRawAverages(oscilloscope, reader, size, repeat);
         }

@@ -2,6 +2,7 @@ package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.channel.Channels;
+import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.Scopes;
@@ -9,11 +10,14 @@ import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
 import java.io.*;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Arrays;
+import java.util.Locale;
 
 public class Main {
 
     public static void main(String[] args) {
-
         Oscilloscope oscilloscope = null;
         BufferedWriter writer = null;
         try {
@@ -26,8 +30,7 @@ public class Main {
                 System.out.println("Flashing firmware");
                 oscilloscope.flash_firmware();
                 Thread.sleep(5000);
-                OscilloscopeManager.findSupportedDevices();
-                oscilloscope = OscilloscopeManager.getFirstFound();
+                oscilloscope = OscilloscopeManager.findAndGetFirst(Scopes.DSO6022BE);
                 System.out.println(oscilloscope.getDescriptor());
             }
         } catch (IOException | UsbException | InterruptedException e) {
@@ -38,12 +41,13 @@ public class Main {
         System.out.println(oscilloscope.getScopeDevice().getActiveUsbConfiguration().getUsbInterface((byte)0).getSettings());
         oscilloscope.setup();
         oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
-        oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
-        oscilloscope.setCalibration(oscilloscope.readCalibrationValues());
-        oscilloscope.getChannel(Channels.CH1).setVoltageRange(VoltageRange.RANGE5000mV);
-        oscilloscope.getChannel(Channels.CH2).setVoltageRange(VoltageRange.RANGE5000mV);
-        oscilloscope.getChannel(Channels.CH1).setProbeMultiplier(10);
-        oscilloscope.getChannel(Channels.CH2).setProbeMultiplier(10);
+        System.out.println(oscilloscope.readCalibrationValues());
+//        oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
+//        oscilloscope.setCalibration(oscilloscope.readCalibrationValues());
+//        oscilloscope.getChannel(Channels.CH1).setVoltageRange(VoltageRange.RANGE5000mV);
+//        oscilloscope.getChannel(Channels.CH2).setVoltageRange(VoltageRange.RANGE5000mV);
+//        oscilloscope.getChannel(Channels.CH1).setProbeMultiplier(10);
+//        oscilloscope.getChannel(Channels.CH2).setProbeMultiplier(10);
         //oscilloscope.setCalibrationFrequency(10000);
         //new CalibrateScope(oscilloscope).fastCalibration();
 //        System.out.println(oscilloscope.getCurrentSampleRate().timeFromPointCount(512) + "s");
@@ -53,8 +57,7 @@ public class Main {
         ScopeDataReader scopeDataReader = null;
         try {
             scopeDataReader = new ScopeDataReader(oscilloscope);
-            CalibrateScope calibrateScope = new CalibrateScope(oscilloscope);
-            calibrateScope.fastCalibration(scopeDataReader);
+            System.out.println(CalibrateScope.fastCalibration(oscilloscope, scopeDataReader));
         } catch (UsbException e) {
             e.printStackTrace();
         } finally {
@@ -68,6 +71,7 @@ public class Main {
             }
 
         }
+
 //        DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 //        df.setMaximumFractionDigits(340);
 //        float a = oscilloscope.getCurrentSampleRate().timeFromPointCount(512);
@@ -105,6 +109,6 @@ public class Main {
 //            }
 //
 //        }
-
+//
     }
 }

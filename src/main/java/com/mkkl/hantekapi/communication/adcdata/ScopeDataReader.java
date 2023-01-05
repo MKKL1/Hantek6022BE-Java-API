@@ -40,6 +40,7 @@ public class ScopeDataReader implements AutoCloseable{
     }
 
     public void syncRead(short size) throws IOException, UsbException {
+        if(!capture) startCapture();
         endpoint.syncReadPipe(queueOutputStream, size);
     }
 

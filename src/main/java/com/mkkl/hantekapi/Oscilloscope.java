@@ -7,7 +7,7 @@ import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
 import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.*;
-import com.mkkl.hantekapi.communication.controlcmd.response.CalibrationData;
+import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.communication.controlcmd.response.ControlResponse;
 import com.mkkl.hantekapi.communication.controlcmd.response.SerializableData;
 import com.mkkl.hantekapi.communication.Serialization;

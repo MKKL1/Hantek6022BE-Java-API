@@ -1,7 +1,7 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.communication.controlcmd.response.CalibrationData;
+import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 
 import java.util.ArrayList;
 
