@@ -6,7 +6,6 @@ public enum VoltageRange {
     RANGE1000mV(5, 6, 4),
     RANGE250mV(10, 0, 0);
 
-    //TODO name?
     private final int gain;
     private final int eeprom_offset;
     private final int eeprom_gain;

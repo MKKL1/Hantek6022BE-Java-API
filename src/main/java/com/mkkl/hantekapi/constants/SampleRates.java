@@ -46,8 +46,11 @@ public enum SampleRates {
         return singleChannel;
     }
 
-    //TODO time seems to be wrong
     public float timeFromPointCount(long pointCount) {
         return pointCount/(float)sampleCount;
+    }
+
+    public float timeBetweenTwoPoints() {
+        return 1/(float)sampleCount;
     }
 }

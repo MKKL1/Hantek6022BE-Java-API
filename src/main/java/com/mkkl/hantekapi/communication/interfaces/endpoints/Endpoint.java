@@ -26,7 +26,6 @@ public abstract class Endpoint {
         packetSize = (short) (((maxPacketSize >> 11)+1) * (maxPacketSize & 0x7ff)); //Not sure what it does, copied from python api
     }
 
-    //TODO close outputstream
     protected synchronized UsbIrp createAsyncReader(short size, AdcDataListener adcDataListener) {
         final short[] _size = {size};
         final int[] finalSize = {0};

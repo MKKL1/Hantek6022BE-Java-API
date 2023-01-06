@@ -2,14 +2,14 @@ package com.mkkl.hantekapi.constants;
 
 import com.mkkl.hantekapi.firmware.SupportedFirmwares;
 
-public enum Scopes {
+public enum OscilloscopeDevices {
     DSO6021(0x6021, SupportedFirmwares.dso6021_firmware),
     DSO6022BE(0x6022, SupportedFirmwares.dso6022be_firmware),
     DSO6022BL(0x602A, SupportedFirmwares.dso6022bl_firmware);
     private final short productId;
     private final SupportedFirmwares firmware;
 
-    Scopes(int productId, SupportedFirmwares firmware) {
+    OscilloscopeDevices(int productId, SupportedFirmwares firmware) {
         this.productId = (short) productId;
         this.firmware = firmware;
     }

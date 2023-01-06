@@ -3,28 +3,23 @@ package com.mkkl.hantekapi.communication.adcdata;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
+import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 
 import java.io.*;
 import java.util.ArrayList;
-
+/**
+ * Stream used for parsing data read from oscilloscope ADC.
+ * ADC data is sent in packets with length of even numbers.
+ * Every second byte is channel's raw voltage data, starting with CH1.
+ * Raw voltage data needs to be formatted by {@link ScopeChannel#formatData(byte)}.
+ */
 public class AdcInputStream extends FilterInputStream{
 
-    private final ChannelManager channelManager;
     private final ArrayList<ScopeChannel> channels;
     private final int packetSize;
-    /**
-     * Creates a {@code FilterInputStream}
-     * by assigning the  argument {@code in}
-     * to the field {@code this.in} so as
-     * to remember it for later use.
-     *  @param in the underlying input stream, or {@code null} if
-     *           this instance is to be created without an underlying stream.
-     * @param channelManager
-     * @param packetSize
-     */
+
     public AdcInputStream(InputStream in, ChannelManager channelManager, int packetSize) {
         super(in);
-        this.channelManager = channelManager;
         this.channels = channelManager.getChannels();
         this.packetSize = packetSize;
     }
@@ -33,6 +28,12 @@ public class AdcInputStream extends FilterInputStream{
         this(in, oscilloscope.getChannelManager(), oscilloscope.getScopeInterface().getEndpoint().getPacketSize());
     }
 
+    /**
+     * Reads two bytes from input stream corresponding to data sample of each channel
+     * @return byte array with length of 2, where index 0 is voltage data of CH1 and index of 1 respectively CH2
+     * @throws EOFException on end of stream
+     * @throws IOException if other I/O error occurs
+     */
     public byte[] readRawVoltages() throws IOException {
         int ch1 = read();
         int ch2 = read();
@@ -41,10 +42,22 @@ public class AdcInputStream extends FilterInputStream{
         return new byte[] {(byte) ch1, (byte) ch2};
     }
 
-    public void skipPacket() throws IOException {
+    /**
+     * Skips N bytes, where N is length of packet sent by device.
+     * @see Endpoint#getPacketSize()
+     * @throws IOException if an I/O error occurs
+     */
+    public int skipPacket() throws IOException {
         skipNBytes(packetSize);
+        return packetSize;
     }
 
+    /**
+     * Uses {@link AdcInputStream#readRawVoltages()} and formats each data sample with {@link ScopeChannel#formatData(byte)}.
+     * @return float array of formatted data samples (measured voltages). index 0 - CH1, index 1 - CH2
+     * @throws EOFException on end of stream
+     * @throws IOException if other I/O error occurs
+     */
     public float[] readFormattedVoltages() throws IOException {
         byte[] rawdata = readRawVoltages();
         float[] fdata = new float[2];
@@ -53,6 +66,11 @@ public class AdcInputStream extends FilterInputStream{
         return fdata;
     }
 
+    /**
+     * Similar to {@link AdcInputStream#readFormattedVoltages()}, but values are saved in each {@link ScopeChannel}
+     * @throws EOFException on end of stream
+     * @throws IOException if other I/O error occurs
+     */
     public void readToChannels() throws IOException {
         float[] fdata = readFormattedVoltages();
         for (int i = 0; i < 2; i++) {
@@ -60,6 +78,13 @@ public class AdcInputStream extends FilterInputStream{
         }
     }
 
+    /**
+     * Similar to {@link AdcInputStream#readRawVoltages()}
+     * @param n how many samples for channels to read. n means that 2n of bytes will read from stream
+     * @return array of byte arrays of raw voltage data. byte[n][2]
+     * @throws EOFException on end of stream
+     * @throws IOException if other I/O error occurs
+     */
     public byte[][] readNRawVoltages(int n) throws IOException {
         byte[][] data = new byte[n][2];
         for (int i = 0; i < n; i++)
@@ -67,6 +92,13 @@ public class AdcInputStream extends FilterInputStream{
         return data;
     }
 
+    /**
+     * Similar to {@link AdcInputStream#readFormattedVoltages()}
+     * @param n how many samples for channels to read. n means that 2n of bytes will read from stream
+     * @return array of float arrays of formatted voltage data. float[n][2]
+     * @throws EOFException on end of stream
+     * @throws IOException if other I/O error occurs
+     */
     public float[][] readNFormattedVoltages(int n) throws IOException {
         float[][] data = new float[n][2];
         for (int i = 0; i < n; i++)

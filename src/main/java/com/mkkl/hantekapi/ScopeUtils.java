@@ -22,7 +22,6 @@ public class ScopeUtils {
         if(single) oscilloscope.setActiveChannels(ActiveChannels.CH1);
         else oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
 
-        //AdcInputStream adcInputStream = new AdcInputStream(reader.getInputStream(), oscilloscope);
         ArrayList<Byte> channel1Data = new ArrayList<>();
         ArrayList<Byte> channel2Data = new ArrayList<>();
         for (int i = 0; i < repeat; i++) {
@@ -33,7 +32,6 @@ public class ScopeUtils {
                 try {
                     while (sizeToRead > 0) {
                         byte[] channelVoltages = inputStream.readRawVoltages();
-                        System.out.println(Arrays.toString(channelVoltages));
                         channel1Data.add(channelVoltages[0]);
                         if (!single) channel2Data.add(channelVoltages[1]);
                         sizeToRead -= 2;

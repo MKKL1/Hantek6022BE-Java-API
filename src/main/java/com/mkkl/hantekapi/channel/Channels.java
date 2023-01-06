@@ -1,5 +1,9 @@
 package com.mkkl.hantekapi.channel;
 
+/**
+ * Channels supported by oscilloscope.
+ * CH1 - id 0, CH2 - id 1
+ */
 public enum Channels {
     CH1(0),
     CH2(1);

@@ -4,7 +4,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HexFormat;
 
-//It could also be intel hex file reader
+//TODO read any firmware, either from file or byte array
+
 public class FirmwareReader extends Reader {
     private final BufferedReader bufferedReader;
 

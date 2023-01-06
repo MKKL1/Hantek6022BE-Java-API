@@ -25,7 +25,7 @@ public class CalibrateScope {
                 oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
                 Thread.sleep(100);
                 System.out.println("Low speed " + voltageRange.name());
-                float[] lowspeed = ScopeUtils.readRawAverages(oscilloscope, reader, (short) (1024*12), 10);
+                float[] lowspeed = ScopeUtils.readRawAverages(oscilloscope, reader, (short) (512*12), 10);
                 calibrationData.setFormattedOffset(Channels.CH1, voltageRange, true, lowspeed[0]+128);
                 calibrationData.setFormattedOffset(Channels.CH2, voltageRange, true, lowspeed[1]+128);
 
@@ -34,7 +34,7 @@ public class CalibrateScope {
                 Thread.sleep(100);
                 System.out.println("High speed " + voltageRange.name());
                 calibrationData.setFormattedOffset(Channels.CH1, voltageRange, false,
-                        ScopeUtils.readRawAverages(oscilloscope, reader, (short) (1024*12), 2)[0]+128);
+                        ScopeUtils.readRawAverages(oscilloscope, reader, (short) (512*12), 2)[0]+128);
             }
             return calibrationData;
         } catch (UsbException | InterruptedException | IOException e) {

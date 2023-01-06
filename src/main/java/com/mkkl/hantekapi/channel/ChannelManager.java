@@ -1,52 +1,53 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
+import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 
 /**
- * Used to make managing array of channels easier.
+ * Used to make managing list of channels easier.
  */
 public class ChannelManager {
     private final int channelCount;
-    private final ArrayList<ScopeChannel> scopeChannels = new ArrayList<>();
-    private int activeChannelCount = 0;
+    private final ArrayList<ScopeChannel> scopeChannels = new ArrayList<>(); //TODO can be replaced with array or hashmap
+    private ActiveChannels activeChannels = ActiveChannels.CH1CH2;
+    private final Oscilloscope oscilloscope;
 
     private ChannelManager(Oscilloscope oscilloscope) {
         this.channelCount = Channels.values().length;
-
+        this.oscilloscope = oscilloscope;
         for(Channels ch : Channels.values())
-            scopeChannels.add(ScopeChannel.create(oscilloscope, ch));
+            scopeChannels.add(ScopeChannel.create(oscilloscope,this, ch));
+        //Making absolute sure that [CH1, CH2]
+        scopeChannels.sort(Comparator.comparingInt(o -> o.getId().getChannelId()));
     }
 
     public static ChannelManager create(Oscilloscope oscilloscope) {
         return new ChannelManager(oscilloscope);
     }
 
-    //TODO this method shouldn't be accessed from oscilloscope object
     /**
      * Sets number of active channels for future reference.
-     * <b>Doesn't actually send information to device.</b>
-     * You probably want to use {@link com.mkkl.hantekapi.Oscilloscope#setActiveChannels(ActiveChannels)}
      */
-    public void setActiveChannelCount(int activeChannelCount) {
-        this.activeChannelCount = activeChannelCount;
+    public void setActiveChannelCount(ActiveChannels activeChannels) {
+        oscilloscope.patch(HantekRequest.getChangeChCountRequest((byte) activeChannels.getActiveCount()))
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set active channels ", ex))
+                .onSuccess(() -> this.activeChannels = activeChannels);
     }
 
-    /**
-     * @return Count of active channels, 2 or 1.
-     * @see ActiveChannels
-     */
-    public int getActiveChannelCount() {
-        return activeChannelCount;
+    public ActiveChannels getActiveChannels() {
+        return activeChannels;
     }
 
     public ArrayList<ScopeChannel> getChannels() {
         return scopeChannels;
     }
 
-    //TODO use hashmap instead of arraylist
     /**
      * @param id Channel index, 0 for channel 1 or 1 for channel 2
      */
@@ -66,7 +67,7 @@ public class ChannelManager {
     }
 
     /**
-     * @return Count of channels that device has.
+     * @return Count of channels that device has. (2)
      */
     public int getChannelCount() {
         return channelCount;

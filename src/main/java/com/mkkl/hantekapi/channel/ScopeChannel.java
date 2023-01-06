@@ -4,17 +4,26 @@ import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
-import javax.usb.UsbException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-
+/**
+ * Class representing channel of oscilloscope.
+ * Used to store calibration data and to format raw ADC data.<br>
+ * Stored data:
+ * <ul>
+ *      <li>Offsets</li>
+ *      <li>Gains</li>
+ *      <li>Probe multiplier</li>
+ *      <li>Selected voltage range</li>
+ * </ul>
+ */
 public class ScopeChannel {
-    private static final VoltageRange[] voltageRanges = VoltageRange.values();
-
     private final Oscilloscope oscilloscope;
+    private final ChannelManager channelManager;
     private final Channels id;
+
     private final HashMap<VoltageRange, Float> offsets = new HashMap<>(){{
         put(VoltageRange.RANGE5000mV, 0f);
         put(VoltageRange.RANGE2500mV, 0f);
@@ -31,49 +40,91 @@ public class ScopeChannel {
     private float current_offset;
     private float current_gain;
     private float current_scale_factor = 1;
-
     private VoltageRange currentVoltageRange = VoltageRange.RANGE5000mV;
     private int probeMultiplier = 1;
     private float additionalOffset = 0;
 
+    //Used to temporarily save data from AdcInputStream for reading from channel
     public float currentData;
 
-    private ScopeChannel(Oscilloscope oscilloscope, Channels id) {
+    private ScopeChannel(Oscilloscope oscilloscope,ChannelManager channelManager, Channels id) {
         this.oscilloscope = oscilloscope;
+        this.channelManager = channelManager;
         this.id = id;
     }
 
-    public static ScopeChannel create(Oscilloscope oscilloscope, Channels id) {
-        return new ScopeChannel(oscilloscope, id);
+    public static ScopeChannel create(Oscilloscope oscilloscope,ChannelManager channelManager, Channels id) {
+        return new ScopeChannel(oscilloscope,channelManager, id);
     }
 
-    public static ScopeChannel create(Oscilloscope oscilloscope, int id) {
-        return new ScopeChannel(oscilloscope,
+    public static ScopeChannel create(Oscilloscope oscilloscope,ChannelManager channelManager, int id) {
+        return new ScopeChannel(oscilloscope,channelManager,
                 Arrays.stream(Channels.values())
                         .filter(x -> x.getChannelId() == id)
                         .findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("Id of " + id + "not found in enum")));
     }
 
+    /**
+     * Sets offsets from formatted {@link com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData#offsets}
+     * @param newOffsets hash map of offset value for each voltage range
+     */
     public void setOffsets(HashMap<VoltageRange, Float> newOffsets) {
         this.offsets.putAll(newOffsets);
         recalculate_scalefactor();
     }
 
+    /**
+     * Sets gains from formatted {@link com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData#gains}
+     * @param newGains hash map of gain value for each voltage range
+     */
     public void setGains(HashMap<VoltageRange, Float> newGains) {
         for(Map.Entry<VoltageRange, Float> entry : newGains.entrySet())
             this.gains.put(entry.getKey(), this.gains.get(entry.getKey()) * entry.getValue());
         recalculate_scalefactor();
     }
 
-    private void recalculate_scalefactor() {
-        current_offset = offsets.get(currentVoltageRange);
-        current_gain = gains.get(currentVoltageRange);
-        current_scale_factor = ((5.12f * probeMultiplier * current_gain) / (float)(currentVoltageRange.getGain() << 7));
+    /**
+     * Formats raw ADC data to formatted voltage data, using calibration data set on this channel.
+     */
+    public float formatData(byte rawData) {
+        return ((rawData+128) - (current_offset + additionalOffset)) * current_scale_factor;
     }
 
-    public float formatData(byte rawdata) {
-        return ((rawdata+128) - (current_offset + additionalOffset)) * current_scale_factor;
+    /**
+     * Sets voltage range on channel
+     */
+    public void setVoltageRange(VoltageRange currentVoltageRange) {
+        this.currentVoltageRange = currentVoltageRange;
+        recalculate_scalefactor();
+        if(id == Channels.CH1) oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
+        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
+    }
+
+    /**
+     * Sets probe multiplier factor.
+     * @param probeMultiplier any int (most likely 1 or 10)
+     */
+    public void setProbeMultiplier(int probeMultiplier) {
+        this.probeMultiplier = probeMultiplier;
+        recalculate_scalefactor();
+    }
+
+    /**
+     * Sets additional offset separate from calibration values.
+     * Offsets are subtracted from base value
+     */
+    public void setAdditionalOffset(float additionalOffset) {
+        this.additionalOffset = additionalOffset;
+    }
+
+    /**
+     * Check if channel was set active
+     */
+    public boolean isActive() {
+        ActiveChannels activeChannels = this.channelManager.getActiveChannels();
+        if (activeChannels == ActiveChannels.CH1 && this.id == Channels.CH1) return true;
+        else return activeChannels == ActiveChannels.CH1CH2 && (this.id == Channels.CH1 || this.id == Channels.CH2);
     }
 
     public Channels getId() {
@@ -92,40 +143,29 @@ public class ScopeChannel {
         return currentVoltageRange;
     }
 
-    public void setVoltageRange(VoltageRange currentVoltageRange) {
-        this.currentVoltageRange = currentVoltageRange;
-        recalculate_scalefactor();
-        if(id == Channels.CH1) oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
-        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
-    }
-
     public int getProbeMultiplier() {
         return probeMultiplier;
     }
 
-    public void setProbeMultiplier(int probeMultiplier) {
-        this.probeMultiplier = probeMultiplier;
-        recalculate_scalefactor();
-    }
 
     public float getAdditionalOffset() {
         return additionalOffset;
     }
 
-    public void setAdditionalOffset(float additionalOffset) {
-        this.additionalOffset = additionalOffset;
+    private void recalculate_scalefactor() {
+        current_offset = offsets.get(currentVoltageRange);
+        current_gain = gains.get(currentVoltageRange);
+        current_scale_factor = ((5.12f * probeMultiplier * current_gain) / (float)(currentVoltageRange.getGain() << 7));
     }
 
     @Override
     public String toString() {
-        System.out.println(offsets);
-        System.out.println(gains);
         return "ScopeChannel{" +
                 "id=" + id +
-                ", _offset=" + current_offset +
-                ", _gain=" + current_gain +
-                ", scale_factor=" + current_scale_factor +
-                ", currentVoltageRange=" + currentVoltageRange +
+                ", current_offset=" + current_offset +
+                ", current_gain=" + current_gain +
+                ", current_scale_factor=" + current_scale_factor +
+                ", currentVoltageRange=" + currentVoltageRange.name() +
                 ", probeMultiplier=" + probeMultiplier +
                 ", additionalOffset=" + additionalOffset +
                 '}';

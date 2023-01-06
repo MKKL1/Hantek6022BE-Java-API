@@ -7,7 +7,6 @@ import javax.usb.UsbConst;
 import javax.usb.UsbException;
 import javax.usb.UsbInterface;
 import javax.usb.UsbIrp;
-import java.io.*;
 
 public class BulkEndpoint extends Endpoint{
     public BulkEndpoint(UsbInterface usbInterface) {
