@@ -53,12 +53,11 @@ public class Main {
 //        System.out.println(oscilloscope.getCurrentSampleRate().timeFromPointCount(512) + "s");
 
 
-
         ScopeDataReader scopeDataReader = null;
         try {
             scopeDataReader = new ScopeDataReader(oscilloscope);
             System.out.println(CalibrateScope.fastCalibration(oscilloscope, scopeDataReader));
-        } catch (UsbException e) {
+        } catch (UsbException | IOException e) {
             e.printStackTrace();
         } finally {
             try {

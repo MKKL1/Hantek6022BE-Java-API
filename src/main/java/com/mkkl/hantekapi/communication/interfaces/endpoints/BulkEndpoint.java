@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
+import com.mkkl.hantekapi.communication.adcdata.AdcDataListener;
 
 import javax.usb.UsbConst;
 import javax.usb.UsbException;
@@ -14,19 +15,21 @@ public class BulkEndpoint extends Endpoint{
         if(usbEndpoint.getType() != UsbConst.ENDPOINT_TYPE_BULK) throw new RuntimeException("Endpoint is not of type bulk");
     }
 
-    public void asyncReadPipe(OutputStream outputStream, short size) throws UsbException, IOException {
+    @Override
+    public void asyncReadPipe(short size, AdcDataListener adcDataListener) throws UsbException {
         if(!isPipeOpen) openPipe();
-        UsbIrp irp = createAsyncReader(outputStream);
+        UsbIrp irp = createAsyncReader(size, adcDataListener);
         irp.setData(new byte[size]);
         pipe.asyncSubmit(irp);
     }
 
-    public void syncReadPipe(OutputStream outputStream, short size) throws UsbException, IOException {
+    @Override
+    public byte[] syncReadPipe(short size) throws UsbException {
         if(!isPipeOpen) openPipe();
         UsbIrp irp = pipe.createUsbIrp();
         byte[] data = new byte[size];
         irp.setData(data);
         pipe.syncSubmit(irp);
-        outputStream.write(data);
+        return irp.getData();
     }
 }

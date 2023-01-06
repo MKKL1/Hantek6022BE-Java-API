@@ -8,21 +8,19 @@ import org.apache.commons.io.input.QueueInputStream;
 import org.apache.commons.io.output.QueueOutputStream;
 
 import javax.usb.UsbException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class ScopeDataReader implements AutoCloseable{
 
     private final Oscilloscope oscilloscope;
     private boolean capture = false;
-    private final QueueOutputStream queueOutputStream;
-    private final QueueInputStream queueInputStream;
     private final Endpoint endpoint;
 
-    public ScopeDataReader(Oscilloscope oscilloscope) throws UsbException {
+    public ScopeDataReader(Oscilloscope oscilloscope) throws UsbException, IOException {
         this.oscilloscope = oscilloscope;
-        queueOutputStream = new QueueOutputStream();
-        queueInputStream = queueOutputStream.newQueueInputStream();
         endpoint = oscilloscope.getScopeInterface().getEndpoint();
         endpoint.openPipe();
     }
@@ -39,24 +37,36 @@ public class ScopeDataReader implements AutoCloseable{
                 .onSuccess(() -> capture = false);
     }
 
-    public void syncRead(short size) throws IOException, UsbException {
+    public byte[] syncRead(short size) throws IOException, UsbException {
         if(!capture) startCapture();
-        endpoint.syncReadPipe(queueOutputStream, size);
+        return endpoint.syncReadPipe(size);
     }
 
-    //TODO return 'finished reading' event
-    public void asyncRead(short size) throws IOException, UsbException {
-        endpoint.asyncReadPipe(queueOutputStream, size);
-    }
+    public CompletableFuture<Void> asyncRead(short size, Consumer<byte[]> packetConsumer) throws IOException, UsbException {
+        CompletableFuture<Void> finishFuture = new CompletableFuture<>();
+        endpoint.asyncReadPipe(size, new AdcDataListener() {
+            @Override
+            public void onDataReceived(byte[] data) {
+                packetConsumer.accept(data);
+            }
 
-    public InputStream getInputStream() {
-        return queueInputStream;
+            @Override
+            public void onCompleted(int finalSize) {
+                if (finalSize == size)
+                    finishFuture.complete(null);
+                else finishFuture.completeExceptionally(new UsbException("Received data length was too short (Expected " + size + " bytes, received " + finalSize));
+            }
+
+            @Override
+            public void onError(UsbException e) {
+                finishFuture.completeExceptionally(e);
+            }
+        });
+        return finishFuture;
     }
 
     @Override
     public void close() throws Exception {
         endpoint.close();
-        queueInputStream.close();
-        queueOutputStream.close();
     }
 }

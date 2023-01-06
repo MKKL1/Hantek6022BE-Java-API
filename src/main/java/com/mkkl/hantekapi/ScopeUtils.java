@@ -6,10 +6,13 @@ import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
+import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -19,21 +22,29 @@ public class ScopeUtils {
         if(single) oscilloscope.setActiveChannels(ActiveChannels.CH1);
         else oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
 
-        AdcInputStream adcInputStream = new AdcInputStream(reader.getInputStream(), oscilloscope);
+        //AdcInputStream adcInputStream = new AdcInputStream(reader.getInputStream(), oscilloscope);
         ArrayList<Byte> channel1Data = new ArrayList<>();
         ArrayList<Byte> channel2Data = new ArrayList<>();
         for (int i = 0; i < repeat; i++) {
-            try {
-                reader.startCapture();;
-                reader.syncRead(size);
-                while (true) {
-                    byte[] data = adcInputStream.readRawVoltages();
-                    channel1Data.add(data[0]);
-                    if (!single) channel2Data.add(data[1]);
+            reader.startCapture();
+            CompletableFuture<Void> finish = reader.asyncRead(size, (data) -> {
+                int sizeToRead = data.length;
+                AdcInputStream inputStream = new AdcInputStream(new ByteArrayInputStream(data), oscilloscope);
+                try {
+                    while (sizeToRead > 0) {
+                        byte[] channelVoltages = inputStream.readRawVoltages();
+                        System.out.println(Arrays.toString(channelVoltages));
+                        channel1Data.add(channelVoltages[0]);
+                        if (!single) channel2Data.add(channelVoltages[1]);
+                        sizeToRead -= 2;
+                    }
+                } catch (EOFException e) {
+                    //END
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
                 }
-            } catch (EOFException e) {
-                //END
-            }
+            });
+            finish.join();
             reader.stopCapture();
             Thread.sleep(100);
         }

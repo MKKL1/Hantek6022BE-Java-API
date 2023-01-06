@@ -71,7 +71,7 @@ public class CalibrationData extends SerializableData {
     }
 
     @Override
-    public byte[] serialize() throws IOException{
+    public byte[] serialize() {
         byte[] calibrationRaw = new byte[80];
         for (VoltageRange v: VoltageRange.values())
             for(int i = 0; i < 2; i++)

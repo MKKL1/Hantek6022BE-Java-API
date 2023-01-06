@@ -1,13 +1,12 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
+import com.mkkl.hantekapi.communication.adcdata.AdcDataListener;
+
 import javax.usb.*;
 import javax.usb.event.UsbPipeDataEvent;
 import javax.usb.event.UsbPipeErrorEvent;
 import javax.usb.event.UsbPipeListener;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 
 public abstract class Endpoint {
     protected byte endpointAddress;
@@ -28,31 +27,31 @@ public abstract class Endpoint {
     }
 
     //TODO close outputstream
-    protected synchronized UsbIrp createAsyncReader(OutputStream outputStream) throws UsbException, IOException {
+    protected synchronized UsbIrp createAsyncReader(short size, AdcDataListener adcDataListener) {
+        final short[] _size = {size};
+        final int[] finalSize = {0};
         UsbIrp irp = pipe.createUsbIrp();
         pipe.addUsbPipeListener(new UsbPipeListener() {
             @Override
             public void errorEventOccurred(UsbPipeErrorEvent usbPipeErrorEvent) {
-                UsbException e = usbPipeErrorEvent.getUsbException();
-                e.printStackTrace();
+                adcDataListener.onError(usbPipeErrorEvent.getUsbException());
             }
 
             @Override
             public void dataEventOccurred(UsbPipeDataEvent usbPipeDataEvent) {
                 byte[] data = usbPipeDataEvent.getData();
-                try{
-                    outputStream.write(data);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                adcDataListener.onDataReceived(data);
+                _size[0] -= data.length;
+                finalSize[0] += data.length;
+                if(_size[0] <= 0) adcDataListener.onCompleted(finalSize[0]);
             }
         });
         return irp;
     }
 
-    public abstract void asyncReadPipe(OutputStream outputStream, short size) throws UsbException, IOException;
+    public abstract void asyncReadPipe(short size, AdcDataListener adcDataListener) throws UsbException, IOException;
 
-    public abstract void syncReadPipe(OutputStream outputStream, short size) throws UsbException, IOException;
+    public abstract byte[] syncReadPipe(short size) throws UsbException, IOException;
 
     public UsbEndpoint getUsbEndpoint() {
         return usbEndpoint;
