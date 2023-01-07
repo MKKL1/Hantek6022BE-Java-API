@@ -17,6 +17,7 @@ if (!oscilloscope.isFirmwarePresent()) {
 ```
 Set your parameters
 ```java
+oscilloscope.setup()
 oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
 oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
 oscilloscope.getChannel(Channels.CH1).setVoltageRange(VoltageRange.RANGE5000mV);
