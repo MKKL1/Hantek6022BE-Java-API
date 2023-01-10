@@ -3,7 +3,6 @@ package com.mkkl.hantekapi;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
-import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationKey;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.VoltageRange;
 

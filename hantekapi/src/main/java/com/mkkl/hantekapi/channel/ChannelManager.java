@@ -6,7 +6,6 @@ import com.mkkl.hantekapi.communication.controlcmd.response.calibration.Calibrat
 import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 
 /**

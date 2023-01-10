@@ -51,6 +51,7 @@ public class ScopeChannel {
         this.oscilloscope = oscilloscope;
         this.channelManager = channelManager;
         this.id = id;
+        recalculate_scalefactor();
     }
 
     public static ScopeChannel create(Oscilloscope oscilloscope,ChannelManager channelManager, Channels id) {

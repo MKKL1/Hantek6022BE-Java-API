@@ -3,7 +3,6 @@ package com.mkkl.hantekapi;
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
-import com.mkkl.hantekapi.constants.VoltageRange;
 
 import javax.usb.UsbException;
 import java.io.ByteArrayInputStream;
@@ -11,10 +10,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 public class ScopeUtils {
     public static float[] readRawAverages(Oscilloscope oscilloscope, ScopeDataReader reader, short size, int repeat) throws UsbException, InterruptedException, IOException {

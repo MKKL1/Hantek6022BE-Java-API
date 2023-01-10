@@ -2,31 +2,23 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>com.mkkl.hantekapi</groupId>
+        <artifactId>hantekapi-parent</artifactId>
+        <version>0.9-SNAPSHOT</version>
+    </parent>
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>com.mkkl.hantekapi</groupId>
-    <artifactId>hantekapi-parent</artifactId>
     <packaging>pom</packaging>
-    <version>0.9-SNAPSHOT</version>
 
+    <artifactId>hantekapi-examples</artifactId>
     <modules>
-        <module>hantekapi-examples</module>
-        <module>hantekapi</module>
+        <module>hantekapi-sync-reading</module>
     </modules>
 
-<!--    <properties>-->
-<!--        <maven.compiler.source>17</maven.compiler.source>-->
-<!--        <maven.compiler.target>17</maven.compiler.target>-->
-<!--    </properties>-->
-
-    <dependencies>
-        <dependency>
-            <groupId>org.usb4java</groupId>
-            <artifactId>usb4java-javax</artifactId>
-            <version>1.3.0</version>
-        </dependency>
-    </dependencies>
-
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
 
     <build>
         <plugins>
@@ -42,5 +34,4 @@
             </plugin>
         </plugins>
     </build>
-    
 </project>

@@ -2,7 +2,6 @@ package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
 import com.mkkl.hantekapi.communication.adcdata.AdcDataListener;
-import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 
 import javax.usb.UsbConst;
 import javax.usb.UsbException;

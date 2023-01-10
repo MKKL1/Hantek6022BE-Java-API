@@ -66,11 +66,11 @@ public class OscilloscopeManager {
 //                    new ScopeNotFoundException("Couldn't find device with product id of '0x" +
 //                            HexFormat.of().toHexDigits(scope.getProductId()) + "'"))
     public static Oscilloscope findAndGetFirst(OscilloscopeDevices scope) throws UsbException {
-        return findDevice(scope).entrySet().stream().findFirst().map(Map.Entry::getValue).orElse(null);
+        return findDevice(scope).entrySet().stream().findFirst().map(Map.Entry::getValue).orElseThrow(() -> new NoSuchElementException("Device not found"));
     }
 
     public static Oscilloscope getFirstFound() {
-        return connections.entrySet().stream().findFirst().map(Map.Entry::getValue).orElse(null);
+        return connections.entrySet().stream().findFirst().map(Map.Entry::getValue).orElseThrow(() -> new NoSuchElementException("Device not found"));
     }
 
 }

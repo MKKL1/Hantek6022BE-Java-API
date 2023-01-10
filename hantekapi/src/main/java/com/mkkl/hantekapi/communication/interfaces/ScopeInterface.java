@@ -4,10 +4,8 @@ import com.mkkl.hantekapi.communication.interfaces.endpoints.BulkEndpoint;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.EndpointTypes;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.IsochronousEndpoint;
-import org.usb4java.LibUsb;
 
 import javax.usb.*;
-import java.util.List;
 
 public class ScopeInterface {
     private Endpoint endpoint;
