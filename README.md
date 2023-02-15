@@ -33,6 +33,7 @@ Read data from device
 ```java
 ScopeDataReader scopeDataReader = oscilloscope.createDataReader();
 byte[] bytes = scopeDataReader.syncRead((short) 1024);
+AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), oscilloscope);
 int readBytes = 0;
 while (readBytes < bytes.length) {
     float[] channelData = input.readFormattedVoltages();
