@@ -1,3 +1,5 @@
+package com.mkkl.hantekapi.examples;
+
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.OscilloscopeManager;
 import com.mkkl.hantekapi.channel.ActiveChannels;
