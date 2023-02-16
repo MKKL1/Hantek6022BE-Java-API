@@ -7,6 +7,7 @@ import com.mkkl.hantekapi.constants.VoltageRange;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Class representing channel of oscilloscope.
@@ -98,8 +99,15 @@ public class ScopeChannel {
     public void setVoltageRange(VoltageRange currentVoltageRange) {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
-        if(id == Channels.CH1) oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId())).onFailureThrow((ex) -> new RuntimeException(ex));
-        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId())).onFailureThrow((ex) -> new RuntimeException(ex));
+        if(id == Channels.CH1)
+            oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId()))
+                    .onFailureThrow((ex) -> new RuntimeException(ex));
+        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId()))
+                .onFailureThrow((ex) -> new RuntimeException(ex));
+    }
+
+    public void setVoltageRange(int gainId) {
+        setVoltageRange(Arrays.stream(VoltageRange.values()).filter(x -> x.getGainId() == x.getGainMiliV()).findFirst().orElseThrow());
     }
 
     /**
