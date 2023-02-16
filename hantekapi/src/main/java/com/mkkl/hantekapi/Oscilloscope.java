@@ -168,6 +168,17 @@ public class Oscilloscope implements AutoCloseable{
                 .onSuccess(() -> currentSampleRate = sampleRates);
     }
 
+    public void setSampleRate(byte sampleRateId) {
+        patch(HantekRequest.getSampleRateSetRequest(sampleRateId))
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set sample rate",ex))
+                .onSuccess(() ->
+                        currentSampleRate = Arrays
+                                .stream(SampleRates.values())
+                                .filter(x -> x.getSampleRateId() == sampleRateId)
+                                .findFirst()
+                                .orElseThrow());
+    }
+
     /**
      * Send control request to usb device, which reads calibration data from it's eeprom.
      * Then it's deserialized to {@link CalibrationData}.
