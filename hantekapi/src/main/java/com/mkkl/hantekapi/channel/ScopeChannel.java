@@ -98,8 +98,8 @@ public class ScopeChannel {
     public void setVoltageRange(VoltageRange currentVoltageRange) {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
-        if(id == Channels.CH1) oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
-        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGain())).onFailureThrow((ex) -> new RuntimeException(ex));
+        if(id == Channels.CH1) oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId())).onFailureThrow((ex) -> new RuntimeException(ex));
+        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId())).onFailureThrow((ex) -> new RuntimeException(ex));
     }
 
     /**
@@ -156,7 +156,7 @@ public class ScopeChannel {
     private void recalculate_scalefactor() {
         current_offset = offsets.get(currentVoltageRange);
         current_gain = gains.get(currentVoltageRange);
-        current_scale_factor = ((5.12f * probeMultiplier * current_gain) / (float)(currentVoltageRange.getGain() << 7));
+        current_scale_factor = ((5.12f * probeMultiplier * current_gain) / (float)(currentVoltageRange.getGainId() << 7));
     }
 
     @Override
