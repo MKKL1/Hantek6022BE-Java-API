@@ -68,26 +68,31 @@ public class ScopeDataReader implements AutoCloseable, AdcDataReader{
      * @param packetConsumer consumer of packet data
      * @return CompletableFuture of finished reading data
      */
-    public CompletableFuture<Void> asyncRead(short size, Consumer<byte[]> packetConsumer) throws IOException, UsbException {
+    public CompletableFuture<Void> asyncRead(short size, Consumer<byte[]> packetConsumer) {
         CompletableFuture<Void> finishFuture = new CompletableFuture<>();
-        endpoint.asyncReadPipe(size, new AdcDataListener() {
-            @Override
-            public void onDataReceived(byte[] data) {
-                packetConsumer.accept(data);
-            }
+        try {
+            endpoint.asyncReadPipe(size, new AdcDataListener() {
+                @Override
+                public void onDataReceived(byte[] data) {
+                    packetConsumer.accept(data);
+                }
 
-            @Override
-            public void onCompleted(int finalSize) {
-                if (finalSize == size)
-                    finishFuture.complete(null);
-                else finishFuture.completeExceptionally(new UsbException("Received data length was too short (Expected " + size + " bytes, received " + finalSize));
-            }
+                @Override
+                public void onCompleted(int finalSize) {
+                    if (finalSize == size)
+                        finishFuture.complete(null);
+                    else
+                        finishFuture.completeExceptionally(new UsbException("Received data length was too short (Expected " + size + " bytes, received " + finalSize));
+                }
 
-            @Override
-            public void onError(UsbException e) {
-                finishFuture.completeExceptionally(e);
-            }
-        });
+                @Override
+                public void onError(UsbException e) {
+                    finishFuture.completeExceptionally(e);
+                }
+            });
+        } catch (Exception e) {
+            finishFuture.completeExceptionally(e);
+        }
         return finishFuture;
     }
 
