@@ -26,6 +26,7 @@ public abstract class Endpoint {
         packetSize = (short) (((maxPacketSize >> 11)+1) * (maxPacketSize & 0x7ff)); //Not sure what it does, copied from python api
     }
 
+    //TODO don't create new listener each time
     protected synchronized UsbIrp createAsyncReader(short size, AdcDataListener adcDataListener) {
         final short[] _size = {size};
         final int[] finalSize = {0};
