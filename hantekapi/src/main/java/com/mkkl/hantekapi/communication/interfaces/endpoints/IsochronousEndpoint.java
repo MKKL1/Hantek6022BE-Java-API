@@ -1,12 +1,10 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
-import org.usb4java.DeviceHandle;
-import org.usb4java.InterfaceDescriptor;
-import org.usb4java.LibUsb;
-import org.usb4java.LibUsbException;
+import org.usb4java.*;
 
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 public class IsochronousEndpoint extends Endpoint {
     public IsochronousEndpoint(DeviceHandle deviceHandle, InterfaceDescriptor interfaceDescriptor) {
@@ -15,12 +13,23 @@ public class IsochronousEndpoint extends Endpoint {
             throw new RuntimeException("Endpoint is not isochronous");
     }
 
+    //TODO isochronous transfer requires number of packets instead of overall size of data
     @Override
-    public void asyncReadPipe(short size, AdcDataListener adcDataListener) throws LibUsbException {
+    public void asyncReadPipe(short numberOfPackets, TransferCallback callback) throws LibUsbException {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(numberOfPackets*getPacketSize());
+        Transfer transfer = LibUsb.allocTransfer();
+        LibUsb.fillIsoTransfer(transfer, deviceHandle, endpointAddress, buffer, numberOfPackets, callback, null, timeout);
+        int result = LibUsb.submitTransfer(transfer);
+        if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to submit transfer", result);
     }
 
     @Override
     public ByteBuffer syncReadPipe(short size) throws LibUsbException {
+//        ByteBuffer buffer = ByteBuffer.allocateDirect(size);
+//        IntBuffer transferred = IntBuffer.allocate(1);
+//        int result = LibUsb.(deviceHandle, endpointAddress, buffer, transferred, timeout);
+//        if (result != LibUsb.SUCCESS) throw new LibUsbException("Control transfer failed", result);
+//        return buffer;
         return null;
     }
 }

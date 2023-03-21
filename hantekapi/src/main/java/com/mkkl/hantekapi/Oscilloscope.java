@@ -5,7 +5,7 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
-import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
+import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.*;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.communication.controlcmd.response.ControlResponse;
@@ -47,18 +47,18 @@ public class Oscilloscope implements AutoCloseable {
     private boolean deviceSetup = false;
     private final boolean firmwarePresent;
 
-    private Oscilloscope(Device usbDevice, boolean firmwarePresent){
-        this.scopeDevice = usbDevice;
+    private Oscilloscope(Device scopeDevice, boolean firmwarePresent){
+        this.scopeDevice = scopeDevice;
         this.firmwarePresent = firmwarePresent;
 
         //Initialize context
         context = new Context();
         int result = LibUsb.init(context);
-        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to initialize libusb", result);
+        if(result < 0) throw new LibUsbException("Unable to initialize libusb", result);
 
         //Get device descriptor
-        result = LibUsb.getDeviceDescriptor(usbDevice, deviceDescriptor);
-        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to read device descriptor", result);
+        result = LibUsb.getDeviceDescriptor(scopeDevice, deviceDescriptor);
+        if(result < 0) throw new LibUsbException("Unable to read device descriptor", result);
     }
 
     public static Oscilloscope create(Device usbDevice) {
@@ -72,7 +72,7 @@ public class Oscilloscope implements AutoCloseable {
     /**
      * Method used to initialize connection with device's usb interface.
      * While control request's can be sent without connecting to interface,
-     * {@link ScopeDataReader} requires it to read ADC data.
+     * {@link SyncScopeDataReader} requires it to read ADC data.
      * Use this method after finding device or after flashing firmware.
      * Connects to default bulk interface
      * @see Oscilloscope#setup(SupportedInterfaces) 
@@ -84,26 +84,35 @@ public class Oscilloscope implements AutoCloseable {
     /**
      * Method used to initialize connection with device's usb interface.
      * While control request's can be sent without connecting to interface,
-     * {@link ScopeDataReader} requires it to read ADC data.
+     * {@link SyncScopeDataReader} requires it to read ADC data.
      * Use this method after finding device or after flashing firmware
      * @param supportedInterfaces Set which usb interface to use
      */
     public Oscilloscope setup(SupportedInterfaces supportedInterfaces) {
-        channelManager = ChannelManager.create(this);
-        openHandle();
-        scopeInterface = new ScopeInterface(scopeDevice, deviceHandle);
-        scopeInterface.setInterface(supportedInterfaces);
-        scopeInterface.claim();
-        deviceSetup = true;
-        if (currentSampleRate==null) setSampleRate(SampleRates.SAMPLES_100kS_s);
-        if (firmwarePresent) setActiveChannels(ActiveChannels.CH1CH2);
+        try {
+            channelManager = ChannelManager.create(this);
+            openHandle();
+            scopeInterface = new ScopeInterface(scopeDevice, deviceHandle);
+            scopeInterface.setInterface(supportedInterfaces);
+            scopeInterface.claim();
+            deviceSetup = true;
+            if (currentSampleRate == null) setSampleRate(SampleRates.SAMPLES_100kS_s);
+            if (firmwarePresent) setActiveChannels(ActiveChannels.CH1CH2);
+        } catch (Exception e) {
+            try {
+                close();
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to initialize oscilloscope", ex);
+            }
+        }
         return this;
     }
 
     private void openHandle() throws LibUsbException {
         deviceHandle = new DeviceHandle();
         int result = LibUsb.open(scopeDevice, deviceHandle);
-        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to open USB device", result);
+        System.out.println(result);
+        if(result < 0) throw new LibUsbException("Unable to open USB device", result);
     }
 
     /**
@@ -166,7 +175,7 @@ public class Oscilloscope implements AutoCloseable {
      * To be exact this method sends control request from {@link HantekRequest#getChangeChCountRequest(byte)} to device.
      * Used when you need bigger sample rate (>30M samples/s).
      * While capturing on single channel(CH1), CH2 data will be captured, but it wouldn't be accurate
-     * After changing active channels make sure to start capture again {@link ScopeDataReader#startCapture()}.
+     * After changing active channels make sure to start capture again {@link SyncScopeDataReader#startCapture()}.
      * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @param activeChannels Either CH1 active CH2 deactivated or CH1 and CH2 active
      */
@@ -332,8 +341,8 @@ public class Oscilloscope implements AutoCloseable {
      * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @return new instance of ScopeDataReader
      */
-    public ScopeDataReader createDataReader() throws LibUsbException {
-        return new ScopeDataReader(this);
+    public SyncScopeDataReader createDataReader() throws LibUsbException {
+        return new SyncScopeDataReader(this);
     }
 
     public ScopeChannel getChannel(Channels channels) {
@@ -380,6 +389,10 @@ public class Oscilloscope implements AutoCloseable {
         return deviceHandle;
     }
 
+    public Context getUsbContext() {
+        return context;
+    }
+
     public DeviceDescriptor getDeviceDescriptor() {
         return deviceDescriptor;
     }
@@ -391,7 +404,7 @@ public class Oscilloscope implements AutoCloseable {
     @Override
     public void close() throws Exception {
         if (scopeInterface != null) scopeInterface.close();
-        if (deviceHandle != null) LibUsb.close(deviceHandle);
+        if (deviceHandle != null && deviceHandle.getPointer() != 0) LibUsb.close(deviceHandle);
         LibUsb.exit(context);
         deviceSetup = false;
     }
@@ -407,7 +420,7 @@ public class Oscilloscope implements AutoCloseable {
             data.position(2);
             data.get(bString);
             s = new String(bString, StandardCharsets.UTF_16LE);
-        } catch (LibUsbException e) {
+        } catch (Exception e) {
             s = "UNKNOWN_PRODUCT_STRING";
         }
         return s;

@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 public class HantekDeviceList {
-    public List<HantekDeviceRecord> connections;
+    private List<HantekDeviceRecord> connections;
     public HantekDeviceList(List<HantekDeviceRecord> connections) {
         this.connections = connections;
     }
@@ -30,5 +30,9 @@ public class HantekDeviceList {
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("Device not found"))
                 .oscilloscope();
+    }
+
+    public List<HantekDeviceRecord> getConnections() {
+        return connections;
     }
 }

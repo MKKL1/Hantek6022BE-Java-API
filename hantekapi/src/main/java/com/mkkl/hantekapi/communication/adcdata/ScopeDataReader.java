@@ -5,27 +5,19 @@ import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 
-import java.io.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
+import java.io.Closeable;
+import java.io.IOException;
 
-/**
- * Class used for reading data from usb endpoints.
- * Synchronous, as well as asychnchronous solution is
- * provided with {@link ScopeDataReader#syncRead(short)} and {@link ScopeDataReader#asyncRead(short, Consumer)} respectively.
- * Remember to call {@link ScopeDataReader#startCapture()} before capturing data to trigger oscilloscope's capture mode
- * and {@link ScopeDataReader#stopCapture()} when data capturing is finished, to let it rest.
- *
- */
-public class ScopeDataReader implements AutoCloseable {
-
-    private final Oscilloscope oscilloscope;
-    private boolean capture = false;
-    private final Endpoint endpoint;
+public abstract class ScopeDataReader implements Closeable {
+    protected final Oscilloscope oscilloscope;
+    protected boolean capture = false;
+    protected final Endpoint endpoint;
+    protected final short defaultSize;
 
     public ScopeDataReader(Oscilloscope oscilloscope) {
         this.oscilloscope = oscilloscope;
         endpoint = oscilloscope.getScopeInterface().getEndpoint();
+        defaultSize = endpoint.getPacketSize();
     }
 
     /**
@@ -49,27 +41,4 @@ public class ScopeDataReader implements AutoCloseable {
                 .onSuccess(() -> capture = false);
     }
 
-    /**
-     * Synchronous reading from oscilloscope's ADC.
-     * @param size The number of data points for both channels to retrieve. size/2 samples per channel.
-     * @return raw ADC data. Use {@link AdcInputStream} to format this output
-     */
-    public byte[] syncRead(short size) throws IOException {
-        if(!capture) startCapture();
-        return endpoint.syncReadPipe(size);
-    }
-
-    //TODO process events in queue to ensure data correct order
-    /**
-     * Asynchronous reading from oscilloscope's ADC.
-     * @param size The number of data points for both channels to retrieve. size/2 samples per channel.
-     */
-    public CompletableFuture<Void> asyncRead(short size) {
-        return null;
-    }
-
-    @Override
-    public void close() throws Exception {
-
-    }
 }

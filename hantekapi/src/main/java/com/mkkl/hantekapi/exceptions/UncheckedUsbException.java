@@ -1,6 +1,5 @@
 package com.mkkl.hantekapi.exceptions;
 
-import javax.usb.UsbException;
 import java.io.IOException;
 import java.util.Objects;
 

@@ -1,7 +1,7 @@
 package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.Channels;
-import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
+import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.VoltageRange;
@@ -15,7 +15,7 @@ public class CalibrateScope {
      * Calculates calibration values.
      * Use only when 0V are applied to both channels
      */
-    public static CalibrationData fastCalibration(Oscilloscope oscilloscope,ScopeDataReader reader) {
+    public static CalibrationData fastCalibration(Oscilloscope oscilloscope, SyncScopeDataReader reader) {
         CalibrationData calibrationData = new CalibrationData();
         try {
             for (VoltageRange voltageRange : VoltageRange.values()) {

@@ -61,8 +61,9 @@ public class OscilloscopeManager {
         finally
         {
             LibUsb.freeDeviceList(devices, true);
+            LibUsb.exit(context);
         }
-        LibUsb.exit(context);
+
         return new HantekDeviceList(deviceList);
     }
 }

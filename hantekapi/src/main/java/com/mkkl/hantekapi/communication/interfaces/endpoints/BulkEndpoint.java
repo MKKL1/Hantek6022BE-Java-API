@@ -1,10 +1,7 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
-import org.usb4java.DeviceHandle;
-import org.usb4java.InterfaceDescriptor;
-import org.usb4java.LibUsb;
-import org.usb4java.LibUsbException;
+import org.usb4java.*;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -18,8 +15,12 @@ public class BulkEndpoint extends Endpoint{
     }
 
     @Override
-    public void asyncReadPipe(short size, AdcDataListener adcDataListener) throws LibUsbException {
-
+    public void asyncReadPipe(short size, TransferCallback callback) throws LibUsbException {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(size);
+        Transfer transfer = LibUsb.allocTransfer();
+        LibUsb.fillBulkTransfer(transfer, deviceHandle, endpointAddress, buffer, callback, null, timeout);
+        int result = LibUsb.submitTransfer(transfer);
+        if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to submit transfer", result);
     }
 
     @Override
