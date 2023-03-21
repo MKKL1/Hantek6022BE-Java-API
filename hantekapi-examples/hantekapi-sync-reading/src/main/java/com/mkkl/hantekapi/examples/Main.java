@@ -2,14 +2,10 @@ package com.mkkl.hantekapi.examples;
 
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.OscilloscopeManager;
-import com.mkkl.hantekapi.channel.ActiveChannels;
-import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
-import com.mkkl.hantekapi.constants.OscilloscopeDevices;
-import com.mkkl.hantekapi.constants.SampleRates;
-import com.mkkl.hantekapi.constants.VoltageRange;
+import com.mkkl.hantekapi.constants.HantekDevices;
 
 import javax.usb.UsbException;
 import java.io.BufferedWriter;
@@ -26,7 +22,7 @@ public class Main {
         Oscilloscope oscilloscope = null;
         try {
             //Find connected oscilloscopes of type DSO6022BE and choose first found
-            oscilloscope = OscilloscopeManager.findAndGetFirst(OscilloscopeDevices.DSO6022BE);
+            oscilloscope = OscilloscopeManager.findAndGetFirst(HantekDevices.DSO6022BE);
             //Print descriptor
             System.out.println(oscilloscope.getDescriptor());
 
@@ -37,7 +33,7 @@ public class Main {
                 //Waiting for device with flashed firmware to appear
                 while(oscilloscope == null || !oscilloscope.isFirmwarePresent()) {
                     Thread.sleep(100);
-                    oscilloscope = OscilloscopeManager.findAndGetFirst(OscilloscopeDevices.DSO6022BE);
+                    oscilloscope = OscilloscopeManager.findAndGetFirst(HantekDevices.DSO6022BE);
                     System.out.print('.');
                 }
             }

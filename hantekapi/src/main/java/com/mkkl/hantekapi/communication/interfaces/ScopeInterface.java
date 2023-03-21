@@ -4,36 +4,35 @@ import com.mkkl.hantekapi.communication.interfaces.endpoints.BulkEndpoint;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.EndpointTypes;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.IsochronousEndpoint;
-
-import javax.usb.*;
+import org.usb4java.*;
 
 public class ScopeInterface {
     private Endpoint endpoint;
-    private UsbInterface usbInterface;
-    private final UsbDevice usbDevice;
-    private UsbInterface activeSetting;
+    private final Device usbDevice;
+    private final DeviceHandle deviceHandle;
+    private Interface usbInterface;
+    private InterfaceDescriptor interfaceDescriptor;
+    private final byte interfaceId = 0;
 
-    public ScopeInterface(UsbDevice usbDevice) {
+    public ScopeInterface(Device usbDevice, DeviceHandle deviceHandle) {
         this.usbDevice = usbDevice;
+        this.deviceHandle = deviceHandle;
     }
 
-    //TODO high-level usb4java api doesn't provide utility to set interface's active setting
-    public void setInterface(SupportedInterfaces supportedInterfaces) throws UsbException {
-        this.usbInterface = usbDevice.getActiveUsbConfiguration().getUsbInterface((byte)0);
-////        usbInterface.claim();
-//        setAltSetting(usbInterface, supportedInterfaces.getInterfaceId());
-//
-//        System.out.println(usbInterface.isActive());
-//
-//        this.activeSetting = usbInterface.getSetting(supportedInterfaces.getInterfaceId());
-//
-//        System.out.println(usbInterface.getUsbInterfaceDescriptor().bInterfaceNumber());
-//        System.out.println(activeSetting.getUsbInterfaceDescriptor().bInterfaceNumber());
+    public void setInterface(SupportedInterfaces supportedInterfaces) throws LibUsbException {
+        ConfigDescriptor configDescriptor = new ConfigDescriptor();
+        int result = LibUsb.getConfigDescriptor(usbDevice, (byte) 0, configDescriptor);
+        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to read config descriptor", result);
+        usbInterface = configDescriptor.iface()[interfaceId];
+        interfaceDescriptor = usbInterface.altsetting()[supportedInterfaces.getInterfaceId()];//TODO check
+
+        result = LibUsb.setInterfaceAltSetting(deviceHandle, interfaceId, supportedInterfaces.getInterfaceId());
+        if(result != LibUsb.SUCCESS) throw new LibUsbException("Failed to set alternate setting on interface", result);
 
         if(supportedInterfaces.getEndpointType() == EndpointTypes.Bulk)
-            this.endpoint = new BulkEndpoint(usbInterface);
+            this.endpoint = new BulkEndpoint(deviceHandle, interfaceDescriptor);
         else if(supportedInterfaces.getEndpointType() == EndpointTypes.Iso)
-            this.endpoint = new IsochronousEndpoint(usbInterface);
+            this.endpoint = new IsochronousEndpoint(deviceHandle, interfaceDescriptor);
         //shouldn't be here
         else throw new RuntimeException("Endpoint type not supported");
     }
@@ -42,36 +41,21 @@ public class ScopeInterface {
         return endpoint;
     }
 
-    public UsbInterface getUsbInterface() {
+    public Interface getInterface() {
         return usbInterface;
     }
 
-    public void claim() throws UsbException {
-        usbInterface.claim();
+    public InterfaceDescriptor getInterfaceDescriptor() {
+        return interfaceDescriptor;
     }
 
-    public void close() throws UsbException {
-        endpoint.close();
-        usbInterface.release();
-//        usbInterface.release();
+    public void claim() throws LibUsbException {
+        int result = LibUsb.claimInterface(deviceHandle, interfaceId);
+        if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to claim interface", result);
     }
 
-    public void setAltSetting(UsbInterface iface, byte alternateSetting) throws UsbException {
-        if (!iface.getUsbConfiguration().equals(usbDevice.getActiveUsbConfiguration())) {
-            throw new UsbException("The interface does not belong to the open configuration");
-        }
-        synchronized (this) {
-            UsbControlIrp irp = usbDevice.createUsbControlIrp(
-                    (byte)(UsbConst.REQUESTTYPE_TYPE_STANDARD | UsbConst.REQUESTTYPE_RECIPIENT_INTERFACE),
-                    UsbConst.REQUEST_SET_INTERFACE,
-                    alternateSetting,
-                    iface.getUsbInterfaceDescriptor().bInterfaceNumber());
-            irp.setData(new byte[0]);
-            irp.setAcceptShortPacket(true);
-            usbDevice.syncSubmit(irp);
-            if (irp.isUsbException()) {
-                throw irp.getUsbException();
-            }
-        }
+    public void close() throws LibUsbException {
+        int result = LibUsb.releaseInterface(deviceHandle, interfaceId);
+        if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to release interface", result);
     }
 }

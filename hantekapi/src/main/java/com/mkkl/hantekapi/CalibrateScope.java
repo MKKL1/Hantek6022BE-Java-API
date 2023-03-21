@@ -5,8 +5,8 @@ import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.VoltageRange;
+import org.usb4java.LibUsbException;
 
-import javax.usb.UsbException;
 import java.io.IOException;
 
 public class CalibrateScope {
@@ -36,7 +36,7 @@ public class CalibrateScope {
                         ScopeUtils.readRawAverages(oscilloscope, reader, (short) (512*12), 2)[0]+128);
             }
             return calibrationData;
-        } catch (UsbException | InterruptedException | IOException e) {
+        } catch (LibUsbException | InterruptedException | IOException e) {
             e.printStackTrace();
             return null;
         }

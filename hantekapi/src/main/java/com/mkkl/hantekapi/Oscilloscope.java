@@ -21,10 +21,11 @@ import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
 import com.mkkl.hantekapi.firmware.FirmwareReader;
 import com.mkkl.hantekapi.firmware.ScopeFirmware;
 import com.mkkl.hantekapi.firmware.SupportedFirmwares;
-import org.usb4java.Device;
+import org.usb4java.*;
 
-import javax.usb.*;
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
@@ -34,17 +35,30 @@ import java.util.HexFormat;
  * Provides high level methods used to interact with device,
  * as well as lower level methods for direct communication.
  */
-public class Oscilloscope implements AutoCloseable{
+public class Oscilloscope implements AutoCloseable {
+    private DeviceHandle deviceHandle;
+    private final DeviceDescriptor deviceDescriptor = new DeviceDescriptor();
+    private final Device scopeDevice;
+    private final Context context;
+
     private ChannelManager channelManager;
     private SampleRates currentSampleRate;
     private ScopeInterface scopeInterface;
-    private final Device scopeDevice;
     private boolean deviceSetup = false;
     private final boolean firmwarePresent;
 
     private Oscilloscope(Device usbDevice, boolean firmwarePresent){
         this.scopeDevice = usbDevice;
         this.firmwarePresent = firmwarePresent;
+
+        //Initialize context
+        context = new Context();
+        int result = LibUsb.init(context);
+        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to initialize libusb", result);
+
+        //Get device descriptor
+        result = LibUsb.getDeviceDescriptor(usbDevice, deviceDescriptor);
+        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to read device descriptor", result);
     }
 
     public static Oscilloscope create(Device usbDevice) {
@@ -75,18 +89,21 @@ public class Oscilloscope implements AutoCloseable{
      * @param supportedInterfaces Set which usb interface to use
      */
     public Oscilloscope setup(SupportedInterfaces supportedInterfaces) {
-        try {
-            channelManager = ChannelManager.create(this);
-            scopeInterface = new ScopeInterface(scopeDevice);
-            scopeInterface.setInterface(supportedInterfaces);
-            scopeInterface.claim();
-            deviceSetup = true;
-            if (currentSampleRate==null) setSampleRate(SampleRates.SAMPLES_100kS_s);
-            if (firmwarePresent) setActiveChannels(ActiveChannels.CH1CH2);
-        } catch (UsbException e) {
-            throw new UncheckedUsbException(e);
-        }
+        channelManager = ChannelManager.create(this);
+        openHandle();
+        scopeInterface = new ScopeInterface(scopeDevice, deviceHandle);
+        scopeInterface.setInterface(supportedInterfaces);
+        scopeInterface.claim();
+        deviceSetup = true;
+        if (currentSampleRate==null) setSampleRate(SampleRates.SAMPLES_100kS_s);
+        if (firmwarePresent) setActiveChannels(ActiveChannels.CH1CH2);
         return this;
+    }
+
+    private void openHandle() throws LibUsbException {
+        deviceHandle = new DeviceHandle();
+        int result = LibUsb.open(scopeDevice, deviceHandle);
+        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to open USB device", result);
     }
 
     /**
@@ -95,11 +112,12 @@ public class Oscilloscope implements AutoCloseable{
      * @return raw response from device
      */
     public ControlResponse<byte[]> request(final ControlRequest controlRequest) {
+        if(deviceHandle == null) throw new UncheckedUsbException("Device handle was not initialized");
         byte[] bytes = null;
-        UsbException e = null;
+        LibUsbException e = null;
         try {
-            bytes = controlRequest.read(scopeDevice);
-        } catch (UsbException _e) {
+            bytes = controlRequest.read(deviceHandle);
+        } catch (LibUsbException _e) {
             e = _e;
         }
         return new ControlResponse<>(bytes, e);
@@ -133,10 +151,11 @@ public class Oscilloscope implements AutoCloseable{
      * @return response without data, used for passing exception
      */
     public ControlResponse<Void> patch(final ControlRequest controlRequest) {
-        UsbException e = null;
+        if(deviceHandle == null) throw new UncheckedUsbException("Device handle was not initialized");
+        LibUsbException e = null;
         try {
-            controlRequest.write(scopeDevice);
-        } catch (UsbException _e) {
+            controlRequest.write(deviceHandle);
+        } catch (LibUsbException _e) {
             e = _e;
         }
         return new ControlResponse<>(null, e);
@@ -248,7 +267,7 @@ public class Oscilloscope implements AutoCloseable{
      */
     public void flash_firmware() {
         flash_firmware(Arrays.stream(HantekDevices.values())
-                .filter(x -> x.getProductId() == scopeDevice.getUsbDeviceDescriptor().idProduct())
+                .filter(x -> x.getProductId() == deviceDescriptor.idProduct())
                 .findFirst()
                 .orElseThrow());
     }
@@ -270,8 +289,6 @@ public class Oscilloscope implements AutoCloseable{
             flash_firmware(firmwareInputStream);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } catch (UsbException e) {
-            throw new UncheckedUsbException(e);
         }
     }
 
@@ -279,7 +296,7 @@ public class Oscilloscope implements AutoCloseable{
      * Flashes device's firmware
      * @param firmwareInputStream input stream of firmware in intel's hex format. Typically saved in .hex or .ihex file
      */
-    public void flash_firmware(InputStream firmwareInputStream) throws IOException, UsbException {
+    public void flash_firmware(InputStream firmwareInputStream) throws IOException, LibUsbException {
         if (firmwareInputStream == null) throw new IOException("No firmware in input stream");
         try(FirmwareReader firmwareReader = new FirmwareReader(new BufferedReader(new InputStreamReader(firmwareInputStream)))) {
             flash_firmware(new ScopeFirmware(firmwareReader.readAll()));
@@ -290,9 +307,9 @@ public class Oscilloscope implements AutoCloseable{
      * Flashes device's firmware
      * @param firmware can be read with {@link FirmwareReader} from .hex or .ihex files (saved in resources)
      */
-    public void flash_firmware(ScopeFirmware firmware) throws UsbException {
+    public void flash_firmware(ScopeFirmware firmware) throws LibUsbException {
         for(FirmwareControlPacket packet : firmware.getFirmwareData())
-            patch(HantekRequest.getFirmwareRequest(packet.address(), packet.data())).onFailureThrow((e) -> (UsbException)e);
+            patch(HantekRequest.getFirmwareRequest(packet.address(), packet.data())).onFailureThrow((e) -> (LibUsbException)e);
     }
 
     /**
@@ -315,7 +332,7 @@ public class Oscilloscope implements AutoCloseable{
      * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @return new instance of ScopeDataReader
      */
-    public ScopeDataReader createDataReader() throws UsbException {
+    public ScopeDataReader createDataReader() throws LibUsbException {
         return new ScopeDataReader(this);
     }
 
@@ -355,8 +372,16 @@ public class Oscilloscope implements AutoCloseable{
         return scopeInterface;
     }
 
-    public UsbDevice getScopeDevice() {
+    public Device getScopeDevice() {
         return scopeDevice;
+    }
+
+    public DeviceHandle getDeviceHandle() {
+        return deviceHandle;
+    }
+
+    public DeviceDescriptor getDeviceDescriptor() {
+        return deviceDescriptor;
     }
 
     public SampleRates getCurrentSampleRate() {
@@ -366,38 +391,34 @@ public class Oscilloscope implements AutoCloseable{
     @Override
     public void close() throws Exception {
         if (scopeInterface != null) scopeInterface.close();
+        if (deviceHandle != null) LibUsb.close(deviceHandle);
+        LibUsb.exit(context);
         deviceSetup = false;
     }
 
     @Override
     public String toString() {
-        String s = "Oscilloscope ";
+        String s;
         try {
-            s += scopeDevice.getProductString();
-        } catch (UsbException | UnsupportedEncodingException e) {
-            s += "UNKNOWN_PRODUCT_STRING";
+            final ByteBuffer data = ByteBuffer.allocateDirect(256);
+            int result = LibUsb.getStringDescriptor(deviceHandle, deviceDescriptor.iProduct(), (byte) 0, data);
+            if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to read device descriptor", result);
+            byte[] bString = new byte[data.get(0)-2];
+            data.position(2);
+            data.get(bString);
+            s = new String(bString, StandardCharsets.UTF_16LE);
+        } catch (LibUsbException e) {
+            s = "UNKNOWN_PRODUCT_STRING";
         }
         return s;
     }
 
     public String getDescriptor() {
         String s = this + System.lineSeparator();
-        UsbDeviceDescriptor usbDeviceDescriptor = scopeDevice.getUsbDeviceDescriptor();
-        s += " idProduct=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.idProduct()) + System.lineSeparator();
-        s += " idVendor=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.idVendor()) + System.lineSeparator();
-        s += " bcdDevice=0x" + HexFormat.of().toHexDigits(usbDeviceDescriptor.bcdDevice()) + System.lineSeparator();
+        s += " idProduct=0x" + HexFormat.of().toHexDigits(deviceDescriptor.idProduct()) + System.lineSeparator();
+        s += " idVendor=0x" + HexFormat.of().toHexDigits(deviceDescriptor.idVendor()) + System.lineSeparator();
+        s += " bcdDevice=0x" + HexFormat.of().toHexDigits(deviceDescriptor.bcdDevice()) + System.lineSeparator();
         s += " isFirmwarePresent=" + isFirmwarePresent() + System.lineSeparator();
-        s += " interfaces=" + scopeDevice.getActiveUsbConfiguration().getUsbInterfaces().toString() + System.lineSeparator();
-        try {
-            s += " manufacturer=" + scopeDevice.getManufacturerString() + System.lineSeparator();
-        } catch (UsbException | UnsupportedEncodingException e) {
-            s += " manufacturer=UNKNOWN" + System.lineSeparator();
-        }
-        try {
-            s += " serial=" + scopeDevice.getSerialNumberString() + System.lineSeparator();
-        } catch (UsbException | UnsupportedEncodingException e) {
-            s += " serial=UNKNOWN" + System.lineSeparator();
-        }
         return s;
     }
 }

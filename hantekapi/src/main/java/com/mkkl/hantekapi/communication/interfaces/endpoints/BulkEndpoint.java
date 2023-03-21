@@ -1,34 +1,33 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
-import com.mkkl.hantekapi.communication.adcdata.AdcDataListener;
+import org.usb4java.DeviceHandle;
+import org.usb4java.InterfaceDescriptor;
+import org.usb4java.LibUsb;
+import org.usb4java.LibUsbException;
 
-import javax.usb.UsbConst;
-import javax.usb.UsbException;
-import javax.usb.UsbInterface;
-import javax.usb.UsbIrp;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+
 
 public class BulkEndpoint extends Endpoint{
-    public BulkEndpoint(UsbInterface usbInterface) {
-        super(UsbConnectionConst.BULK_ENDPOINT_ADDRESS, usbInterface);
-        if(usbEndpoint.getType() != UsbConst.ENDPOINT_TYPE_BULK) throw new RuntimeException("Endpoint is not of type bulk");
+    public BulkEndpoint(DeviceHandle deviceHandle, InterfaceDescriptor interfaceDescriptor) {
+        super(UsbConnectionConst.BULK_ENDPOINT_ADDRESS, deviceHandle, interfaceDescriptor);
+        if((endpointDescriptor.bmAttributes() & LibUsb.TRANSFER_TYPE_MASK) != LibUsb.TRANSFER_TYPE_BULK)
+            throw new RuntimeException("Endpoint is not of type bulk");
     }
 
     @Override
-    public void asyncReadPipe(short size, AdcDataListener adcDataListener) throws UsbException {
-        if(!isPipeOpen) openPipe();
-        UsbIrp irp = createAsyncReader(size, adcDataListener);
-        irp.setData(new byte[size]);
-        pipe.asyncSubmit(irp);
+    public void asyncReadPipe(short size, AdcDataListener adcDataListener) throws LibUsbException {
+
     }
 
     @Override
-    public byte[] syncReadPipe(short size) throws UsbException {
-        if(!isPipeOpen) openPipe();
-        UsbIrp irp = pipe.createUsbIrp();
-        byte[] data = new byte[size];
-        irp.setData(data);
-        pipe.syncSubmit(irp);
-        return irp.getData();
+    public ByteBuffer syncReadPipe(short size) throws LibUsbException {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(size);
+        IntBuffer transferred = IntBuffer.allocate(1);
+        int result = LibUsb.bulkTransfer(deviceHandle, endpointAddress, buffer, transferred, timeout);
+        if (result != LibUsb.SUCCESS) throw new LibUsbException("Control transfer failed", result);
+        return buffer;
     }
 }

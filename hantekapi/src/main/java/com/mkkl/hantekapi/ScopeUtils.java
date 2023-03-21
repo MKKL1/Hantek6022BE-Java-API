@@ -4,7 +4,6 @@ import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
 
-import javax.usb.UsbException;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -13,7 +12,7 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 public class ScopeUtils {
-    public static float[] readRawAverages(Oscilloscope oscilloscope, ScopeDataReader reader, short size, int repeat) throws UsbException, InterruptedException, IOException {
+    public static float[] readRawAverages(Oscilloscope oscilloscope, ScopeDataReader reader, short size, int repeat) throws InterruptedException, IOException {
         final boolean single = oscilloscope.getCurrentSampleRate().isSingleChannel();
         if(single) oscilloscope.setActiveChannels(ActiveChannels.CH1);
         else oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);

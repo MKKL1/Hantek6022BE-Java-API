@@ -5,7 +5,6 @@ import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 
-import javax.usb.UsbException;
 import java.io.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -18,16 +17,15 @@ import java.util.function.Consumer;
  * and {@link ScopeDataReader#stopCapture()} when data capturing is finished, to let it rest.
  *
  */
-public class ScopeDataReader implements AutoCloseable, AdcDataReader{
+public class ScopeDataReader implements AutoCloseable {
 
     private final Oscilloscope oscilloscope;
     private boolean capture = false;
     private final Endpoint endpoint;
 
-    public ScopeDataReader(Oscilloscope oscilloscope) throws UsbException {
+    public ScopeDataReader(Oscilloscope oscilloscope) {
         this.oscilloscope = oscilloscope;
         endpoint = oscilloscope.getScopeInterface().getEndpoint();
-        endpoint.openPipe();
     }
 
     /**
@@ -56,7 +54,7 @@ public class ScopeDataReader implements AutoCloseable, AdcDataReader{
      * @param size The number of data points for both channels to retrieve. size/2 samples per channel.
      * @return raw ADC data. Use {@link AdcInputStream} to format this output
      */
-    public byte[] syncRead(short size) throws IOException, UsbException {
+    public byte[] syncRead(short size) throws IOException {
         if(!capture) startCapture();
         return endpoint.syncReadPipe(size);
     }
@@ -65,39 +63,13 @@ public class ScopeDataReader implements AutoCloseable, AdcDataReader{
     /**
      * Asynchronous reading from oscilloscope's ADC.
      * @param size The number of data points for both channels to retrieve. size/2 samples per channel.
-     * @param packetConsumer consumer of packet data
-     * @return CompletableFuture of finished reading data
      */
-    public CompletableFuture<Void> asyncRead(short size, Consumer<byte[]> packetConsumer) {
-        CompletableFuture<Void> finishFuture = new CompletableFuture<>();
-        try {
-            endpoint.asyncReadPipe(size, new AdcDataListener() {
-                @Override
-                public void onDataReceived(byte[] data) {
-                    packetConsumer.accept(data);
-                }
-
-                @Override
-                public void onCompleted(int finalSize) {
-                    if (finalSize == size)
-                        finishFuture.complete(null);
-                    else
-                        finishFuture.completeExceptionally(new UsbException("Received data length was too short (Expected " + size + " bytes, received " + finalSize));
-                }
-
-                @Override
-                public void onError(UsbException e) {
-                    finishFuture.completeExceptionally(e);
-                }
-            });
-        } catch (Exception e) {
-            finishFuture.completeExceptionally(e);
-        }
-        return finishFuture;
+    public CompletableFuture<Void> asyncRead(short size) {
+        return null;
     }
 
     @Override
     public void close() throws Exception {
-        endpoint.close();
+
     }
 }
