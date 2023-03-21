@@ -14,13 +14,14 @@ import com.mkkl.hantekapi.communication.Serialization;
 import com.mkkl.hantekapi.communication.interfaces.ScopeInterface;
 import com.mkkl.hantekapi.communication.interfaces.SupportedInterfaces;
 import com.mkkl.hantekapi.constants.SampleRates;
-import com.mkkl.hantekapi.constants.OscilloscopeDevices;
+import com.mkkl.hantekapi.constants.HantekDevices;
 import com.mkkl.hantekapi.exceptions.DeviceNotInitialized;
 import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
 import com.mkkl.hantekapi.firmware.FirmwareReader;
 import com.mkkl.hantekapi.firmware.ScopeFirmware;
 import com.mkkl.hantekapi.firmware.SupportedFirmwares;
+import org.usb4java.Device;
 
 import javax.usb.*;
 import java.io.*;
@@ -37,20 +38,20 @@ public class Oscilloscope implements AutoCloseable{
     private ChannelManager channelManager;
     private SampleRates currentSampleRate;
     private ScopeInterface scopeInterface;
-    private final UsbDevice scopeDevice;
+    private final Device scopeDevice;
     private boolean deviceSetup = false;
     private final boolean firmwarePresent;
 
-    private Oscilloscope(UsbDevice usbDevice, boolean firmwarePresent){
+    private Oscilloscope(Device usbDevice, boolean firmwarePresent){
         this.scopeDevice = usbDevice;
         this.firmwarePresent = firmwarePresent;
     }
 
-    public static Oscilloscope create(UsbDevice usbDevice) {
+    public static Oscilloscope create(Device usbDevice) {
         return new Oscilloscope(usbDevice, false);
     }
 
-    public static Oscilloscope create(UsbDevice usbDevice, boolean firmwarePresent) {
+    public static Oscilloscope create(Device usbDevice, boolean firmwarePresent) {
         return new Oscilloscope(usbDevice, firmwarePresent);
     }
 
@@ -243,10 +244,10 @@ public class Oscilloscope implements AutoCloseable{
 
     /**
      * Flashes device's firmware with found openhantek firmware.
-     * If device is not in {@link OscilloscopeDevices}, {@link java.util.NoSuchElementException} will be thrown
+     * If device is not in {@link HantekDevices}, {@link java.util.NoSuchElementException} will be thrown
      */
     public void flash_firmware() {
-        flash_firmware(Arrays.stream(OscilloscopeDevices.values())
+        flash_firmware(Arrays.stream(HantekDevices.values())
                 .filter(x -> x.getProductId() == scopeDevice.getUsbDeviceDescriptor().idProduct())
                 .findFirst()
                 .orElseThrow());
@@ -256,7 +257,7 @@ public class Oscilloscope implements AutoCloseable{
      * Flashes device's firmware with openhantek's equivalence for given oscilloscope
      * @param scope device for which firmware will be searched for
      */
-    public void flash_firmware(OscilloscopeDevices scope) {
+    public void flash_firmware(HantekDevices scope) {
         flash_firmware(scope.getFirmwareToFlash());
     }
 

@@ -1,9 +1,12 @@
 package com.mkkl.hantekapi;
 
-import com.mkkl.hantekapi.constants.OscilloscopeDevices;
+import com.mkkl.hantekapi.constants.HantekDevices;
+import org.usb4java.*;
 
-import javax.usb.*;
+import java.sql.Array;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 //Making sure if for some reason you have multiple oscilloscopes connected you can manage them all
 
@@ -15,62 +18,51 @@ public class OscilloscopeManager {
     private static final short NO_FIRMWARE_VENDOR_ID = 0x04B4;
     private static final short FIRMWARE_PRESENT_VENDOR_ID = 0x04B5;
 
-    public static HashMap<UsbDevice, Oscilloscope> connections;
+    public static HantekDeviceList findSupportedDevices() throws LibUsbException {
+        //Initialize context
+        Context context = new Context();
+        int result = LibUsb.init(context);
+        if(result < 0) throw new LibUsbException("Unable to initialize libusb", result);
 
-    public static HashMap<UsbDevice, Oscilloscope> findSupportedDevices() throws UsbException {
-        connections = new HashMap<>();
+        //Initialize device list
+        DeviceList devices = new DeviceList();
+        result = LibUsb.getDeviceList(context, devices);
+        if(result < 0) throw new LibUsbException("Unable to get device list", result);
 
-        UsbHub rootUsbHub = UsbHostManager.getUsbServices().getRootUsbHub();
-        List<UsbDevice> usbDevices = (List<UsbDevice>) rootUsbHub.getAttachedUsbDevices();
-
-//        usbDevices.stream().filter(x -> {
-//            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-//            return desc.idVendor() != FIRMWARE_PRESENT_VENDOR_ID && desc.idVendor() != NO_FIRMWARE_VENDOR_ID &&
-//                    (desc.idProduct() != Scopes.DSO6022BE.getProductId() ||
-//                            desc.idProduct() != Scopes.DSO6022BL.getProductId() ||
-//                            desc.idProduct() != Scopes.DSO6021.getProductId());
-//        }).forEach(x -> {
-//            Oscilloscope oscilloscope = new Oscilloscope(x, false);
-//            connections.put(x, oscilloscope);
-//        });
-
-        for(OscilloscopeDevices scope : new OscilloscopeDevices[]{OscilloscopeDevices.DSO6022BE, OscilloscopeDevices.DSO6022BL, OscilloscopeDevices.DSO6021}) {
-            filterDevices(usbDevices, scope);
+        //List of hantek devices eg. DSO6021,DSO6022BE,DSO6022BL
+        List<HantekDevices> hantekDevices = Stream.of(HantekDevices.values()).toList();
+        List<HantekDeviceRecord> deviceList = new ArrayList<>();
+        try
+        {
+            for (Device device: devices)
+            {
+                try {
+                    //Get descriptor of device
+                    DeviceDescriptor desc = new DeviceDescriptor();
+                    result = LibUsb.getDeviceDescriptor(device, desc);
+                    if (result < 0) throw new LibUsbException("Unable to read device descriptor", result);
+                    //Check if vendor id matches any of defined values
+                    boolean vendorIdGood = (desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID || desc.idVendor() == NO_FIRMWARE_VENDOR_ID);
+                    //Check if product id matches any of DSO6021,DSO6022BE,DSO6022BL
+                    Optional<HantekDevices> deviceType = hantekDevices.stream()
+                            .filter(x -> x.getProductId() == desc.idProduct())
+                            .findFirst();
+                    boolean productIdGood = deviceType.isPresent();
+                    //Continue if device is not supported
+                    if (!vendorIdGood || !productIdGood) continue;
+                    boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdDevice() == FIRMWARE_VERSION;
+                    Oscilloscope oscilloscope = Oscilloscope.create(device, isFirmwarePresent);
+                    deviceList.add(new HantekDeviceRecord(device, oscilloscope, deviceType.get()));
+                } catch (LibUsbException e) {
+                    //TODO log
+                }
+            }
         }
-
-        return connections;
+        finally
+        {
+            LibUsb.freeDeviceList(devices, true);
+        }
+        LibUsb.exit(context);
+        return new HantekDeviceList(deviceList);
     }
-
-    public static HashMap<UsbDevice, Oscilloscope> findDevice(OscilloscopeDevices scope) throws UsbException {
-        connections = new HashMap<>();
-        UsbHub rootUsbHub = UsbHostManager.getUsbServices().getRootUsbHub();
-        List<UsbDevice> usbDevices = (List<UsbDevice>) rootUsbHub.getAttachedUsbDevices();
-        filterDevices(usbDevices, scope);
-
-        return connections;
-    }
-
-    private static void filterDevices(List<UsbDevice> usbDevices, OscilloscopeDevices scope) {
-        usbDevices.stream().filter(x -> {
-            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-            return (desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID || desc.idVendor() == NO_FIRMWARE_VENDOR_ID) &&
-                    desc.idProduct() == scope.getProductId();
-        }).forEach(x -> {
-            UsbDeviceDescriptor desc = x.getUsbDeviceDescriptor();
-            boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdDevice() == FIRMWARE_VERSION;
-            Oscilloscope oscilloscope = Oscilloscope.create(x, isFirmwarePresent);
-            connections.put(x, oscilloscope);
-        });
-    }
-//.orElseThrow(() ->
-//                    new ScopeNotFoundException("Couldn't find device with product id of '0x" +
-//                            HexFormat.of().toHexDigits(scope.getProductId()) + "'"))
-    public static Oscilloscope findAndGetFirst(OscilloscopeDevices scope) throws UsbException {
-        return findDevice(scope).entrySet().stream().findFirst().map(Map.Entry::getValue).orElseThrow(() -> new NoSuchElementException("Device not found"));
-    }
-
-    public static Oscilloscope getFirstFound() {
-        return connections.entrySet().stream().findFirst().map(Map.Entry::getValue).orElseThrow(() -> new NoSuchElementException("Device not found"));
-    }
-
 }
