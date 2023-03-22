@@ -5,6 +5,7 @@ import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.UsbConnectionConst;
+import com.mkkl.hantekapi.communication.adcdata.AsyncScopeDataReader;
 import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.*;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
@@ -325,8 +326,18 @@ public class Oscilloscope implements AutoCloseable {
      * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @return new instance of ScopeDataReader
      */
-    public SyncScopeDataReader createDataReader() throws LibUsbException {
+    public SyncScopeDataReader createSyncDataReader() throws LibUsbException {
+        if(!deviceSetup) throw new DeviceNotInitialized();
         return new SyncScopeDataReader(this);
+    }
+
+    /**
+     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
+     * @return new instance of ScopeDataReader
+     */
+    public AsyncScopeDataReader createAsyncDataReader() throws LibUsbException {
+        if(!deviceSetup) throw new DeviceNotInitialized();
+        return new AsyncScopeDataReader(this);
     }
 
     public ScopeChannel getChannel(Channels channels) {

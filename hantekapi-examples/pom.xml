@@ -13,6 +13,7 @@
     <artifactId>hantekapi-examples</artifactId>
     <modules>
         <module>hantekapi-sync-reading</module>
+        <module>hantekapi-async-reading</module>
     </modules>
 
     <properties>
