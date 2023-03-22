@@ -24,8 +24,6 @@ import com.mkkl.hantekapi.firmware.SupportedFirmwares;
 import org.usb4java.*;
 
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
@@ -37,28 +35,19 @@ import java.util.HexFormat;
  */
 public class Oscilloscope implements AutoCloseable {
     private DeviceHandle deviceHandle;
-    private final DeviceDescriptor deviceDescriptor = new DeviceDescriptor();
-    private final Device scopeDevice;
-    private final Context context;
+    private final UsbDevice usbDevice;
+    //private final Context context = LibUsbInstance.getContext();
 
     private ChannelManager channelManager;
     private SampleRates currentSampleRate;
     private ScopeInterface scopeInterface;
+
     private boolean deviceSetup = false;
     private final boolean firmwarePresent;
 
-    private Oscilloscope(Device scopeDevice, boolean firmwarePresent){
-        this.scopeDevice = scopeDevice;
+    private Oscilloscope(Device device, boolean firmwarePresent){
+        this.usbDevice = new UsbDevice(device);
         this.firmwarePresent = firmwarePresent;
-
-        //Initialize context
-        context = new Context();
-        int result = LibUsb.init(context);
-        if(result < 0) throw new LibUsbException("Unable to initialize libusb", result);
-
-        //Get device descriptor
-        result = LibUsb.getDeviceDescriptor(scopeDevice, deviceDescriptor);
-        if(result < 0) throw new LibUsbException("Unable to read device descriptor", result);
     }
 
     public static Oscilloscope create(Device usbDevice) {
@@ -75,10 +64,10 @@ public class Oscilloscope implements AutoCloseable {
      * {@link SyncScopeDataReader} requires it to read ADC data.
      * Use this method after finding device or after flashing firmware.
      * Connects to default bulk interface
-     * @see Oscilloscope#setup(SupportedInterfaces) 
+     * @see Oscilloscope#setupInterface(SupportedInterfaces)
      */
-    public Oscilloscope setup() {
-        return setup(SupportedInterfaces.BulkTransfer);
+    public Oscilloscope setupInterface() {
+        return setupInterface(SupportedInterfaces.BulkTransfer);
     }
 
     /**
@@ -88,31 +77,25 @@ public class Oscilloscope implements AutoCloseable {
      * Use this method after finding device or after flashing firmware
      * @param supportedInterfaces Set which usb interface to use
      */
-    public Oscilloscope setup(SupportedInterfaces supportedInterfaces) {
+    public Oscilloscope setupInterface(SupportedInterfaces supportedInterfaces) {
         try {
             channelManager = ChannelManager.create(this);
-            openHandle();
-            scopeInterface = new ScopeInterface(scopeDevice, deviceHandle);
+            if (deviceHandle == null) openHandle();
+            scopeInterface = new ScopeInterface(usbDevice);
             scopeInterface.setInterface(supportedInterfaces);
             scopeInterface.claim();
             deviceSetup = true;
             if (currentSampleRate == null) setSampleRate(SampleRates.SAMPLES_100kS_s);
             if (firmwarePresent) setActiveChannels(ActiveChannels.CH1CH2);
         } catch (Exception e) {
-            try {
-                close();
-            } catch (Exception ex) {
-                throw new RuntimeException("Failed to initialize oscilloscope", ex);
-            }
+            //e.printStackTrace();
+            throw new RuntimeException("Failed to initialize oscilloscope!", e);
         }
         return this;
     }
 
-    private void openHandle() throws LibUsbException {
-        deviceHandle = new DeviceHandle();
-        int result = LibUsb.open(scopeDevice, deviceHandle);
-        System.out.println(result);
-        if(result < 0) throw new LibUsbException("Unable to open USB device", result);
+    public void openHandle() {
+        deviceHandle = usbDevice.open();
     }
 
     /**
@@ -121,7 +104,7 @@ public class Oscilloscope implements AutoCloseable {
      * @return raw response from device
      */
     public ControlResponse<byte[]> request(final ControlRequest controlRequest) {
-        if(deviceHandle == null) throw new UncheckedUsbException("Device handle was not initialized");
+        if (deviceHandle == null) openHandle();
         byte[] bytes = null;
         LibUsbException e = null;
         try {
@@ -160,7 +143,7 @@ public class Oscilloscope implements AutoCloseable {
      * @return response without data, used for passing exception
      */
     public ControlResponse<Void> patch(final ControlRequest controlRequest) {
-        if(deviceHandle == null) throw new UncheckedUsbException("Device handle was not initialized");
+        if (deviceHandle == null) openHandle();
         LibUsbException e = null;
         try {
             controlRequest.write(deviceHandle);
@@ -176,7 +159,7 @@ public class Oscilloscope implements AutoCloseable {
      * Used when you need bigger sample rate (>30M samples/s).
      * While capturing on single channel(CH1), CH2 data will be captured, but it wouldn't be accurate
      * After changing active channels make sure to start capture again {@link SyncScopeDataReader#startCapture()}.
-     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
      * @param activeChannels Either CH1 active CH2 deactivated or CH1 and CH2 active
      */
     public void setActiveChannels(ActiveChannels activeChannels) {
@@ -240,7 +223,7 @@ public class Oscilloscope implements AutoCloseable {
     /**
      * Sets calibration data for current instance.
      * This data will be used to properly calculate voltages from raw ADC data sent by usb device.
-     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
      * @param calibrationData calibration data either read or calculated
      */
     public void setCalibration(CalibrationData calibrationData) {
@@ -275,6 +258,7 @@ public class Oscilloscope implements AutoCloseable {
      * If device is not in {@link HantekDevices}, {@link java.util.NoSuchElementException} will be thrown
      */
     public void flash_firmware() {
+        DeviceDescriptor deviceDescriptor = usbDevice.getDeviceDescriptor();
         flash_firmware(Arrays.stream(HantekDevices.values())
                 .filter(x -> x.getProductId() == deviceDescriptor.idProduct())
                 .findFirst()
@@ -338,7 +322,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
      * @return new instance of ScopeDataReader
      */
     public SyncScopeDataReader createDataReader() throws LibUsbException {
@@ -350,7 +334,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
      */
     public ScopeChannel getChannel(int id) {
         if(!deviceSetup) throw new DeviceNotInitialized();
@@ -358,7 +342,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
      */
     public ArrayList<ScopeChannel> getChannels() {
         if(!deviceSetup) throw new DeviceNotInitialized();
@@ -366,7 +350,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
      */
     public ChannelManager getChannelManager() {
         if(!deviceSetup) throw new DeviceNotInitialized();
@@ -381,20 +365,8 @@ public class Oscilloscope implements AutoCloseable {
         return scopeInterface;
     }
 
-    public Device getScopeDevice() {
-        return scopeDevice;
-    }
-
-    public DeviceHandle getDeviceHandle() {
-        return deviceHandle;
-    }
-
-    public Context getUsbContext() {
-        return context;
-    }
-
-    public DeviceDescriptor getDeviceDescriptor() {
-        return deviceDescriptor;
+    public UsbDevice getUsbDevice() {
+        return usbDevice;
     }
 
     public SampleRates getCurrentSampleRate() {
@@ -404,8 +376,7 @@ public class Oscilloscope implements AutoCloseable {
     @Override
     public void close() throws Exception {
         if (scopeInterface != null) scopeInterface.close();
-        if (deviceHandle != null && deviceHandle.getPointer() != 0) LibUsb.close(deviceHandle);
-        LibUsb.exit(context);
+        if (deviceHandle != null) LibUsb.close(deviceHandle);
         deviceSetup = false;
     }
 
@@ -413,13 +384,7 @@ public class Oscilloscope implements AutoCloseable {
     public String toString() {
         String s;
         try {
-            final ByteBuffer data = ByteBuffer.allocateDirect(256);
-            int result = LibUsb.getStringDescriptor(deviceHandle, deviceDescriptor.iProduct(), (byte) 0, data);
-            if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to read device descriptor", result);
-            byte[] bString = new byte[data.get(0)-2];
-            data.position(2);
-            data.get(bString);
-            s = new String(bString, StandardCharsets.UTF_16LE);
+            s = usbDevice.getStringDescriptor();
         } catch (Exception e) {
             s = "UNKNOWN_PRODUCT_STRING";
         }
@@ -428,6 +393,7 @@ public class Oscilloscope implements AutoCloseable {
 
     public String getDescriptor() {
         String s = this + System.lineSeparator();
+        DeviceDescriptor deviceDescriptor = usbDevice.getDeviceDescriptor();
         s += " idProduct=0x" + HexFormat.of().toHexDigits(deviceDescriptor.idProduct()) + System.lineSeparator();
         s += " idVendor=0x" + HexFormat.of().toHexDigits(deviceDescriptor.idVendor()) + System.lineSeparator();
         s += " bcdDevice=0x" + HexFormat.of().toHexDigits(deviceDescriptor.bcdDevice()) + System.lineSeparator();

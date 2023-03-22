@@ -1,5 +1,6 @@
 package com.mkkl.hantekapi.examples;
 
+import com.mkkl.hantekapi.HantekDeviceList;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.OscilloscopeManager;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
@@ -21,29 +22,29 @@ public class Main {
     public static void main(String[] args) {
         Oscilloscope oscilloscope = null;
         try {
+            HantekDeviceList hantekDeviceList = OscilloscopeManager.findSupportedDevices();
             //Find connected oscilloscopes of type DSO6022BE and choose first found
-            oscilloscope = OscilloscopeManager.findSupportedDevices()
-                    .getFirstFound(HantekDevices.DSO6022BE);
+            oscilloscope = hantekDeviceList.getFirstFound(HantekDevices.DSO6022BE);
 
             //Check if software is found, if not flash new firmware
-//            if (!oscilloscope.isFirmwarePresent()) {
-//                //flashing firmware with openhantek's alternative for given device (in this case DSO6022BE)
-//                oscilloscope.flash_firmware();
-//                //Waiting for device with flashed firmware to appear
-//                while(oscilloscope == null || !oscilloscope.isFirmwarePresent()) {
-//                    Thread.sleep(100);
-//                    oscilloscope = OscilloscopeManager.findSupportedDevices()
-//                            .getFirstFound(HantekDevices.DSO6022BE);
-//                    System.out.print('.');
-//                }
-//            }
+            if (!oscilloscope.isFirmwarePresent()) {
+                //flashing firmware with openhantek's alternative for given device (in this case DSO6022BE)
+                oscilloscope.flash_firmware();
+                //Waiting for device with flashed firmware to appear
+                while(oscilloscope == null || !oscilloscope.isFirmwarePresent()) {
+                    Thread.sleep(100);
+                    oscilloscope = OscilloscopeManager.findSupportedDevices()
+                            .getFirstFound(HantekDevices.DSO6022BE);
+                    System.out.print('.');
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
         assert oscilloscope != null;
 
         //Setting up connection with device
-        oscilloscope.setup();
+        oscilloscope.setupInterface();
         //Print descriptor
         System.out.println(oscilloscope.getDescriptor());
         //Read calibration data from device

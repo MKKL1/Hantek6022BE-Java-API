@@ -1,5 +1,6 @@
 package com.mkkl.hantekapi.communication.adcdata;
 
+import com.mkkl.hantekapi.LibUsbInstance;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import org.usb4java.*;
@@ -12,7 +13,7 @@ public class AsyncScopeDataReader extends ScopeDataReader {
 
     public AsyncScopeDataReader(Oscilloscope oscilloscope) {
         super(oscilloscope);
-        eventHandlingThread = new EventHandlingThread(oscilloscope.getUsbContext());
+        eventHandlingThread = new EventHandlingThread(LibUsbInstance.getContext());
         eventHandlingThread.start();
     }
 

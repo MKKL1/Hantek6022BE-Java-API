@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 public class HantekDeviceList {
-    private List<HantekDeviceRecord> connections;
+    private final List<HantekDeviceRecord> connections;
     public HantekDeviceList(List<HantekDeviceRecord> connections) {
         this.connections = connections;
     }

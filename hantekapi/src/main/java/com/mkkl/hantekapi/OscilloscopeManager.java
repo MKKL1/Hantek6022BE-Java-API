@@ -20,13 +20,11 @@ public class OscilloscopeManager {
 
     public static HantekDeviceList findSupportedDevices() throws LibUsbException {
         //Initialize context
-        Context context = new Context();
-        int result = LibUsb.init(context);
-        if(result < 0) throw new LibUsbException("Unable to initialize libusb", result);
+
 
         //Initialize device list
         DeviceList devices = new DeviceList();
-        result = LibUsb.getDeviceList(context, devices);
+        int result = LibUsb.getDeviceList(LibUsbInstance.getContext(), devices);
         if(result < 0) throw new LibUsbException("Unable to get device list", result);
 
         //List of hantek devices eg. DSO6021,DSO6022BE,DSO6022BL
@@ -50,7 +48,10 @@ public class OscilloscopeManager {
                     boolean productIdGood = deviceType.isPresent();
                     //Continue if device is not supported
                     if (!vendorIdGood || !productIdGood) continue;
+
                     boolean isFirmwarePresent = desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID && desc.bcdDevice() == FIRMWARE_VERSION;
+                    //Ensures that this device is not freed by freeDeviceList
+                    LibUsb.refDevice(device);
                     Oscilloscope oscilloscope = Oscilloscope.create(device, isFirmwarePresent);
                     deviceList.add(new HantekDeviceRecord(device, oscilloscope, deviceType.get()));
                 } catch (LibUsbException e) {
@@ -61,7 +62,6 @@ public class OscilloscopeManager {
         finally
         {
             LibUsb.freeDeviceList(devices, true);
-            LibUsb.exit(context);
         }
 
         return new HantekDeviceList(deviceList);
