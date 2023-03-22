@@ -26,6 +26,7 @@ public class ScopeInterface {
         interfaceDescriptor = usbInterface.altsetting()[supportedInterfaces.getInterfaceId()];//TODO check
 
         if(supportedInterfaces.getInterfaceId() != 0) {
+            //TODO setting alternate interface doesn't work
             int result = LibUsb.setInterfaceAltSetting(deviceHandle, interfaceId, supportedInterfaces.getInterfaceId());
             if (result < 0) throw new LibUsbException("Failed to set alternate setting on interface", result);
         }

@@ -1,12 +1,10 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.devicemanager;
 
+import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.constants.HantekDevices;
-import org.usb4java.Device;
 import org.usb4java.LibUsbException;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 public class HantekDeviceList {

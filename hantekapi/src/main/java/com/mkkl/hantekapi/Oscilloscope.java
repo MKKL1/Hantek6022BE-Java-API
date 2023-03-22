@@ -64,10 +64,10 @@ public class Oscilloscope implements AutoCloseable {
      * {@link SyncScopeDataReader} requires it to read ADC data.
      * Use this method after finding device or after flashing firmware.
      * Connects to default bulk interface
-     * @see Oscilloscope#setupInterface(SupportedInterfaces)
+     * @see Oscilloscope#setup(SupportedInterfaces)
      */
-    public Oscilloscope setupInterface() {
-        return setupInterface(SupportedInterfaces.BulkTransfer);
+    public Oscilloscope setup() {
+        return setup(SupportedInterfaces.BulkTransfer);
     }
 
     /**
@@ -77,7 +77,7 @@ public class Oscilloscope implements AutoCloseable {
      * Use this method after finding device or after flashing firmware
      * @param supportedInterfaces Set which usb interface to use
      */
-    public Oscilloscope setupInterface(SupportedInterfaces supportedInterfaces) {
+    public Oscilloscope setup(SupportedInterfaces supportedInterfaces) {
         try {
             channelManager = ChannelManager.create(this);
             if (deviceHandle == null) openHandle();
@@ -159,7 +159,7 @@ public class Oscilloscope implements AutoCloseable {
      * Used when you need bigger sample rate (>30M samples/s).
      * While capturing on single channel(CH1), CH2 data will be captured, but it wouldn't be accurate
      * After changing active channels make sure to start capture again {@link SyncScopeDataReader#startCapture()}.
-     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @param activeChannels Either CH1 active CH2 deactivated or CH1 and CH2 active
      */
     public void setActiveChannels(ActiveChannels activeChannels) {
@@ -223,7 +223,7 @@ public class Oscilloscope implements AutoCloseable {
     /**
      * Sets calibration data for current instance.
      * This data will be used to properly calculate voltages from raw ADC data sent by usb device.
-     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @param calibrationData calibration data either read or calculated
      */
     public void setCalibration(CalibrationData calibrationData) {
@@ -322,7 +322,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @return new instance of ScopeDataReader
      */
     public SyncScopeDataReader createDataReader() throws LibUsbException {
@@ -334,7 +334,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      */
     public ScopeChannel getChannel(int id) {
         if(!deviceSetup) throw new DeviceNotInitialized();
@@ -342,7 +342,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      */
     public ArrayList<ScopeChannel> getChannels() {
         if(!deviceSetup) throw new DeviceNotInitialized();
@@ -350,7 +350,7 @@ public class Oscilloscope implements AutoCloseable {
     }
 
     /**
-     * Use {@link Oscilloscope#setupInterface(SupportedInterfaces)} before using this method
+     * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      */
     public ChannelManager getChannelManager() {
         if(!deviceSetup) throw new DeviceNotInitialized();

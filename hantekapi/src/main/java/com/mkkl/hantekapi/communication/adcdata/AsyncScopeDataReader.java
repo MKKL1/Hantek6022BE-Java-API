@@ -61,7 +61,8 @@ class EventHandlingThread extends Thread
         while (!abort)
         {
             int result = LibUsb.handleEventsTimeout(context, 250000);
-            if (result != LibUsb.SUCCESS)
+            //TODO implement stoping mechanism if too many events failed to be processed
+            if (result < 0)
                 throw new LibUsbException("Unable to handle events", result);
         }
     }

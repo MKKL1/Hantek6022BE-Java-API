@@ -1,11 +1,11 @@
-package com.mkkl.hantekapi;
+package com.mkkl.hantekapi.devicemanager;
 
+import com.mkkl.hantekapi.LibUsbInstance;
+import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.constants.HantekDevices;
 import org.usb4java.*;
 
-import java.sql.Array;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 //Making sure if for some reason you have multiple oscilloscopes connected you can manage them all
