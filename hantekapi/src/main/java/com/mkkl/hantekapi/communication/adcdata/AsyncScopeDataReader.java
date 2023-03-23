@@ -6,36 +6,54 @@ import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import org.usb4java.*;
 
 import java.io.IOException;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AsyncScopeDataReader extends ScopeDataReader {
     private final EventHandlingThread eventHandlingThread;
     private final DataRequestProcessorThread dataRequestProcessorThread;
     private final BlockingQueue<DataRequest> dataRequestQueue;
+    private final List<UsbDataListener> listenerList = new ArrayList<UsbDataListener>();
+    private final TransferCallback transferCallback;
 
     public AsyncScopeDataReader(Oscilloscope oscilloscope, int outstandingPackets) {
         super(oscilloscope);
-        dataRequestQueue = new ArrayBlockingQueue<>(outstandingPackets);
+        dataRequestQueue = new LinkedBlockingQueue<>();
         eventHandlingThread = new EventHandlingThread(LibUsbInstance.getContext());
         eventHandlingThread.start();
-        dataRequestProcessorThread = new DataRequestProcessorThread(endpoint, dataRequestQueue);
+        dataRequestProcessorThread = new DataRequestProcessorThread(endpoint, dataRequestQueue, outstandingPackets);
         dataRequestProcessorThread.start();
+
+        transferCallback = transfer -> {
+            dataRequestProcessorThread.notifyReceivedPacket();
+            for(UsbDataListener usbDataListener : listenerList)
+                usbDataListener.processTransfer(transfer);
+        };
     }
 
     public AsyncScopeDataReader(Oscilloscope oscilloscope) {
         this(oscilloscope, 3);
     }
 
-
-    //TODO implement outstanding requests
-    public void read(TransferCallback transferCallback) throws InterruptedException {
-        read(defaultSize, transferCallback);
+    public void registerListener(UsbDataListener usbDataListener) {
+        listenerList.add(usbDataListener);
     }
 
-    public void read(short size, TransferCallback transferCallback) throws InterruptedException {
-        dataRequestQueue.offer(new DataRequest(size, transferCallback), 25000, TimeUnit.MILLISECONDS);
+    public void unregisterListener(UsbDataListener usbDataListener) {
+        listenerList.remove(usbDataListener);
+    }
+
+    //TODO implement outstanding requests
+    public void read() throws InterruptedException {
+        read(defaultSize);
+    }
+
+    public void read(short size) throws InterruptedException {
+        if(!capture) startCapture();
+        dataRequestQueue.put(new DataRequest(size, transferCallback));
     }
 
     public void waitToFinish() throws InterruptedException {
@@ -69,10 +87,18 @@ class DataRequestProcessorThread extends Thread {
     private volatile boolean finish = false;
     private final Endpoint endpoint;
     private final BlockingQueue<DataRequest> dataRequestQueue;
+    private final int outstandingTransfers;
+    private final AtomicInteger transfersInKernel = new AtomicInteger(0);
 
-    public DataRequestProcessorThread(Endpoint endpoint, BlockingQueue<DataRequest> dataRequestQueue) {
+    public DataRequestProcessorThread(Endpoint endpoint, BlockingQueue<DataRequest> dataRequestQueue, int outstandingTransfers) {
         this.endpoint = endpoint;
         this.dataRequestQueue = dataRequestQueue;
+        this.outstandingTransfers = outstandingTransfers;
+    }
+
+    public synchronized void notifyReceivedPacket() {
+        transfersInKernel.decrementAndGet();
+        notifyAll();
     }
 
     /**
@@ -94,9 +120,27 @@ class DataRequestProcessorThread extends Thread {
         while (!Thread.currentThread().isInterrupted() && !abort)
         {
             try {
-                if(finish && dataRequestQueue.isEmpty()) interrupt();
+                //Waiting for transfers in kernel to be smaller than required value
+                while(transfersInKernel.get() >= outstandingTransfers) {
+                    synchronized (this) {
+                        wait();
+                    }
+                }
+
+                if(finish && dataRequestQueue.isEmpty()) {
+                    while(transfersInKernel.get() > 0) {
+                        synchronized (this) {
+                            wait();
+                        }
+                    }
+                    interrupt();
+                }
+
                 DataRequest dataRequest = dataRequestQueue.take();
+                //Submitting transfer
                 endpoint.asyncReadPipe(dataRequest.size(), dataRequest.transferCallback());
+                //Incrementing transfers in kernel local value
+                transfersInKernel.incrementAndGet();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

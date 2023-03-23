@@ -5,7 +5,7 @@ import org.usb4java.TransferCallback;
 
 import java.nio.ByteBuffer;
 
-public abstract class BufferedCallback implements TransferCallback {
+public abstract class BufferedCallback implements UsbDataListener {
     @Override
     public void processTransfer(Transfer transfer) {
         onDataReceived(transfer.buffer(), transfer.actualLength());

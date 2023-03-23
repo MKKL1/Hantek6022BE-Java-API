@@ -51,10 +51,10 @@ public class Main {
             float b = 0;
             int i = 0;
             //Creating reader for voltage data
-            SyncScopeDataReader syncScopeDataReader = oscilloscope.createDataReader();
+            SyncScopeDataReader syncScopeDataReader = oscilloscope.createSyncDataReader();
 
             //Reading data from oscilloscope with given length, 1024 means 512 bytes are read from each channel
-            byte[] bytes = syncScopeDataReader.readToByteArray((short) (1024 + lengthToSkip));
+            byte[] bytes = syncScopeDataReader.readToByteArray((short) 1024);
             //Creating input stream for formatting output data of oscilloscope data reader
             AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), oscilloscope);
             int readBytes = lengthToSkip;
@@ -64,7 +64,7 @@ public class Main {
                 //Formatting raw data from device to human-readable voltages by calibration values set earlier
                 //If you use 10x probe use oscilloscope.getChannel(channel).setProbeMultiplier(10)
                 float[] f = input.readFormattedVoltages();
-                System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
+                //System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
                 writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
                 b += a;
                 i++;
