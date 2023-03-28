@@ -17,8 +17,13 @@ public class BulkEndpoint extends Endpoint{
     @Override
     public void asyncReadPipe(short size, TransferCallback callback) throws LibUsbException {
         ByteBuffer buffer = ByteBuffer.allocateDirect(size);
+        asyncReadPipe(size, buffer, callback);
+    }
+
+    @Override
+    public void asyncReadPipe(short size, ByteBuffer byteBuffer, TransferCallback callback) throws LibUsbException {
         Transfer transfer = LibUsb.allocTransfer();
-        LibUsb.fillBulkTransfer(transfer, deviceHandle, endpointAddress, buffer, callback, null, timeout);
+        LibUsb.fillBulkTransfer(transfer, deviceHandle, endpointAddress, byteBuffer, callback, null, timeout);
         int result = LibUsb.submitTransfer(transfer);
         if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to submit transfer", result);
     }
@@ -26,9 +31,14 @@ public class BulkEndpoint extends Endpoint{
     @Override
     public ByteBuffer syncReadPipe(short size) throws LibUsbException {
         ByteBuffer buffer = ByteBuffer.allocateDirect(size);
-        IntBuffer transferred = IntBuffer.allocate(1);
-        int result = LibUsb.bulkTransfer(deviceHandle, endpointAddress, buffer, transferred, timeout);
-        if (result != LibUsb.SUCCESS) throw new LibUsbException("Control transfer failed", result);
+        syncReadPipe(size, buffer);
         return buffer;
+    }
+
+    @Override
+    public void syncReadPipe(short size, ByteBuffer byteBuffer) throws LibUsbException {
+        IntBuffer transferred = IntBuffer.allocate(1);
+        int result = LibUsb.bulkTransfer(deviceHandle, endpointAddress, byteBuffer, transferred, timeout);
+        if (result != LibUsb.SUCCESS) throw new LibUsbException("Control transfer failed", result);
     }
 }

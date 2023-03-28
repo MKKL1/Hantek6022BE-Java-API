@@ -24,6 +24,11 @@ public class IsochronousEndpoint extends Endpoint {
     }
 
     @Override
+    public void asyncReadPipe(short size, ByteBuffer byteBuffer, TransferCallback callback) throws LibUsbException {
+
+    }
+
+    @Override
     public ByteBuffer syncReadPipe(short size) throws LibUsbException {
 //        ByteBuffer buffer = ByteBuffer.allocateDirect(size);
 //        IntBuffer transferred = IntBuffer.allocate(1);
@@ -31,5 +36,10 @@ public class IsochronousEndpoint extends Endpoint {
 //        if (result != LibUsb.SUCCESS) throw new LibUsbException("Control transfer failed", result);
 //        return buffer;
         return null;
+    }
+
+    @Override
+    public void syncReadPipe(short size, ByteBuffer byteBuffer) throws LibUsbException {
+
     }
 }
