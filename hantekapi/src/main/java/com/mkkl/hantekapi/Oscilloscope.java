@@ -14,6 +14,7 @@ import com.mkkl.hantekapi.communication.controlcmd.response.SerializableData;
 import com.mkkl.hantekapi.communication.Serialization;
 import com.mkkl.hantekapi.communication.interfaces.ScopeInterface;
 import com.mkkl.hantekapi.communication.interfaces.SupportedInterfaces;
+import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.HantekDevices;
 import com.mkkl.hantekapi.exceptions.DeviceNotInitialized;
@@ -400,6 +401,10 @@ public class Oscilloscope implements AutoCloseable {
 
     public ScopeInterface getScopeInterface() {
         return scopeInterface;
+    }
+
+    public Endpoint getEndpoint() {
+        return scopeInterface.getEndpoint();
     }
 
     public UsbDevice getUsbDevice() {

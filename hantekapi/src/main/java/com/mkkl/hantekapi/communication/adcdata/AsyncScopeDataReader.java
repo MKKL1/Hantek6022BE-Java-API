@@ -6,6 +6,7 @@ import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 import org.usb4java.*;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -46,7 +47,6 @@ public class AsyncScopeDataReader extends ScopeDataReader {
         listenerList.remove(usbDataListener);
     }
 
-    //TODO implement outstanding requests
     public void read() throws InterruptedException {
         read(defaultSize);
     }
@@ -54,6 +54,15 @@ public class AsyncScopeDataReader extends ScopeDataReader {
     public void read(short size) throws InterruptedException {
         oscilloscope.ensureCaptureStarted();
         dataRequestQueue.put(new DataRequest(size, transferCallback));
+    }
+
+    public void read(ByteBuffer byteBuffer) throws InterruptedException {
+        read(defaultSize, byteBuffer);
+    }
+
+    public void read(short size, ByteBuffer byteBuffer) throws InterruptedException {
+        oscilloscope.ensureCaptureStarted();
+        dataRequestQueue.put(new DataRequest(size, byteBuffer, transferCallback));
     }
 
     public int getQueueSize() {
@@ -142,7 +151,12 @@ class DataRequestProcessorThread extends Thread {
 
                 DataRequest dataRequest = dataRequestQueue.take();
                 //Submitting transfer
-                endpoint.asyncReadPipe(dataRequest.size(), dataRequest.transferCallback());
+                if(dataRequest.getByteBuffer() == null) {
+                    endpoint.asyncReadPipe(dataRequest.getSize(), dataRequest.getTransferCallback());
+                } else {
+                    endpoint.asyncReadPipe(dataRequest.getSize(), dataRequest.getByteBuffer(), dataRequest.getTransferCallback());
+                }
+
                 //Incrementing transfers in kernel local value
                 transfersInKernel.incrementAndGet();
             } catch (InterruptedException e) {
@@ -153,8 +167,32 @@ class DataRequestProcessorThread extends Thread {
     }
 }
 
-record DataRequest(short size, TransferCallback transferCallback) {
+class DataRequest {
+    private final short size;
+    private final ByteBuffer byteBuffer;
+    private final TransferCallback transferCallback;
 
+    public DataRequest(short size, ByteBuffer byteBuffer, TransferCallback transferCallback) {
+        this.size = size;
+        this.byteBuffer = byteBuffer;
+        this.transferCallback = transferCallback;
+    }
+
+    public DataRequest(short size, TransferCallback transferCallback) {
+        this(size, null, transferCallback);
+    }
+
+    public short getSize() {
+        return size;
+    }
+
+    public ByteBuffer getByteBuffer() {
+        return byteBuffer;
+    }
+
+    public TransferCallback getTransferCallback() {
+        return transferCallback;
+    }
 }
 
 class EventHandlingThread extends Thread {

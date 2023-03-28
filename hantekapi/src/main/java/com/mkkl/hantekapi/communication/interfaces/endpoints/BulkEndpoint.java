@@ -25,7 +25,7 @@ public class BulkEndpoint extends Endpoint{
         Transfer transfer = LibUsb.allocTransfer();
         LibUsb.fillBulkTransfer(transfer, deviceHandle, endpointAddress, byteBuffer, callback, null, timeout);
         int result = LibUsb.submitTransfer(transfer);
-        if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to submit transfer", result);
+        if (result < 0) throw new LibUsbException("Unable to submit transfer", result);
     }
 
     @Override
@@ -39,6 +39,6 @@ public class BulkEndpoint extends Endpoint{
     public void syncReadPipe(short size, ByteBuffer byteBuffer) throws LibUsbException {
         IntBuffer transferred = IntBuffer.allocate(1);
         int result = LibUsb.bulkTransfer(deviceHandle, endpointAddress, byteBuffer, transferred, timeout);
-        if (result != LibUsb.SUCCESS) throw new LibUsbException("Control transfer failed", result);
+        if (result < 0) throw new LibUsbException("Control transfer failed", result);
     }
 }
