@@ -11,9 +11,6 @@ import java.util.function.Consumer;
 
 /**
  * Class used for reading data from usb endpoints.
- * Remember to call {@link SyncScopeDataReader#startCapture()} before capturing data to trigger oscilloscope's capture mode
- * and {@link SyncScopeDataReader#stopCapture()} when data capturing is finished, to let it rest.
- *
  */
 public class SyncScopeDataReader extends ScopeDataReader {
 
@@ -27,7 +24,7 @@ public class SyncScopeDataReader extends ScopeDataReader {
      * @return raw ADC data. Use {@link AdcInputStream} to format this output
      */
     public ByteBuffer readToBuffer(short size) {
-        if(!capture) startCapture();
+        oscilloscope.ensureCaptureStarted();
         return endpoint.syncReadPipe(size);
     }
 

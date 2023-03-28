@@ -23,7 +23,7 @@ public class ScopeUtils {
         ArrayList<Byte> channel1Data = new ArrayList<>();
         ArrayList<Byte> channel2Data = new ArrayList<>();
         for (int i = 0; i < repeat; i++) {
-            reader.startCapture();
+            oscilloscope.startCapture();
             byte[] data = reader.readToByteArray(size);
             AdcInputStream inputStream = new AdcInputStream(new ByteArrayInputStream(data), oscilloscope);
             int sizeToRead = data.length;
@@ -40,7 +40,7 @@ public class ScopeUtils {
                 throw new UncheckedIOException(e);
             }
 
-            reader.stopCapture();
+            oscilloscope.stopCapture();
             Thread.sleep(100);
         }
         return new float[] {channel1Data.size() != 0 ? (channel1Data.stream().mapToInt(Byte::intValue).sum()/(float)channel1Data.size()) : 0f,

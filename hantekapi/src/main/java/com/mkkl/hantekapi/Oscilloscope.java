@@ -44,6 +44,7 @@ public class Oscilloscope implements AutoCloseable {
     private ScopeInterface scopeInterface;
 
     private boolean deviceSetup = false;
+    private boolean capture;
     private final boolean firmwarePresent;
 
     private Oscilloscope(Device device, boolean firmwarePresent){
@@ -159,7 +160,7 @@ public class Oscilloscope implements AutoCloseable {
      * To be exact this method sends control request from {@link HantekRequest#getChangeChCountRequest(byte)} to device.
      * Used when you need bigger sample rate (>30M samples/s).
      * While capturing on single channel(CH1), CH2 data will be captured, but it wouldn't be accurate
-     * After changing active channels make sure to start capture again {@link SyncScopeDataReader#startCapture()}.
+     * After changing active channels make sure to start capture again {@link Oscilloscope#startCapture()}.
      * Use {@link Oscilloscope#setup(SupportedInterfaces)} before using this method
      * @param activeChannels Either CH1 active CH2 deactivated or CH1 and CH2 active
      */
@@ -230,6 +231,31 @@ public class Oscilloscope implements AutoCloseable {
     public void setCalibration(CalibrationData calibrationData) {
         if(!deviceSetup) throw new DeviceNotInitialized();
         channelManager.setCalibration(calibrationData);
+    }
+
+    /**
+     * Makes control request to device to tell it to start capturing samples.
+     * Use before reading data from ADC.
+     */
+    public void startCapture() {
+        patch(HantekRequest.getStartRequest())
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to start capture", ex))
+                .onSuccess(() -> capture = true);
+    }
+
+    /**
+     * Makes control request to device to tell it to stop capturing samples.
+     * Supported only by custom openhantek firmware.
+     * @see Oscilloscope#flash_firmware()
+     */
+    public void stopCapture() {
+        patch(HantekRequest.getStopRequest())
+                .onFailureThrow((ex) -> new UncheckedUsbException("Failed to stop capture", ex))
+                .onSuccess(() -> capture = false);
+    }
+
+    public void ensureCaptureStarted() {
+        if(!capture) startCapture();
     }
 
     /**

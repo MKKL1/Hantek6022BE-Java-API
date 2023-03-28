@@ -63,7 +63,6 @@ public class Main {
                 public void onDataReceived(byte[] bytes) {
                     try {
                         //TODO pass received data to processing thread
-                        System.out.println(Arrays.toString(bytes));
                         //Creating input stream for formatting output data of oscilloscope data reader
                         AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), finalOscilloscope);
                         int readBytes = 0;
@@ -73,7 +72,7 @@ public class Main {
                             //Formatting raw data from device to human-readable voltages by calibration values set earlier
                             //If you use 10x probe use oscilloscope.getChannel(channel).setProbeMultiplier(10)
                             float[] f = input.readFormattedVoltages();
-                            //System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
+                            System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
                             writer.write(df.format(b[0]) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
                             b[0] += a;
                             i[0]++;
@@ -85,11 +84,11 @@ public class Main {
                 }
             };
             asyncDataReader.registerListener(byteArrayCallback);
-            asyncDataReader.startCapture();
+            oscilloscope.startCapture();
             for(int _i = 0; _i < 10; _i++)
                 asyncDataReader.read((short) 1024);
             asyncDataReader.waitToFinish();
-            asyncDataReader.stopCapture();
+            oscilloscope.stopCapture();
             System.out.println("i = " + i[0]);
 
         } catch (IOException | LibUsbException | InterruptedException e) {

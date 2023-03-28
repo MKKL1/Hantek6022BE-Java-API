@@ -52,8 +52,12 @@ public class AsyncScopeDataReader extends ScopeDataReader {
     }
 
     public void read(short size) throws InterruptedException {
-        if(!capture) startCapture();
+        oscilloscope.ensureCaptureStarted();
         dataRequestQueue.put(new DataRequest(size, transferCallback));
+    }
+
+    public int getQueueSize() {
+        return dataRequestQueue.size();
     }
 
     public void waitToFinish() throws InterruptedException {
