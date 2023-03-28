@@ -1,84 +1,39 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
-import com.mkkl.hantekapi.communication.adcdata.AdcDataListener;
+import org.usb4java.*;
 
-import javax.usb.*;
-import javax.usb.event.UsbPipeDataEvent;
-import javax.usb.event.UsbPipeErrorEvent;
-import javax.usb.event.UsbPipeListener;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public abstract class Endpoint {
+    public static long timeout = 5000;
+
     protected byte endpointAddress;
-    protected UsbEndpoint usbEndpoint;
-    protected UsbPipe pipe;
-    protected final UsbEndpointDescriptor descriptor;
-    protected final short maxPacketSize;
-    protected final short packetSize;
+    protected final EndpointDescriptor endpointDescriptor;
+    protected final DeviceHandle deviceHandle;
     protected boolean isPipeOpen = false;
+    private final short packetSize;
 
-    public Endpoint(byte endpointAddress, UsbInterface usbInterface) {
+    public Endpoint(byte endpointAddress, DeviceHandle deviceHandle, InterfaceDescriptor interfaceDescriptor) {
         this.endpointAddress = endpointAddress;
-        this.usbEndpoint = usbInterface.getUsbEndpoint(endpointAddress);
-        pipe = usbEndpoint.getUsbPipe();
-        descriptor = usbEndpoint.getUsbEndpointDescriptor();
-        maxPacketSize = descriptor.wMaxPacketSize();
-        packetSize = (short) (((maxPacketSize >> 11)+1) * (maxPacketSize & 0x7ff)); //Not sure what it does, copied from python api
+        this.deviceHandle = deviceHandle;
+        endpointDescriptor = interfaceDescriptor.endpoint()[0];
+        packetSize = (short) (((getMaxPacketSize() >> 11)+1) * (getMaxPacketSize() & 0x7ff));
     }
 
-    protected synchronized UsbIrp createAsyncReader(short size, AdcDataListener adcDataListener) {
-        final short[] _size = {size};
-        final int[] finalSize = {0};
-        UsbIrp irp = pipe.createUsbIrp();
-        pipe.addUsbPipeListener(new UsbPipeListener() {
-            @Override
-            public void errorEventOccurred(UsbPipeErrorEvent usbPipeErrorEvent) {
-                adcDataListener.onError(usbPipeErrorEvent.getUsbException());
-            }
+    public abstract void asyncReadPipe(short size, TransferCallback callback) throws LibUsbException;
 
-            @Override
-            public void dataEventOccurred(UsbPipeDataEvent usbPipeDataEvent) {
-                byte[] data = usbPipeDataEvent.getData();
-                adcDataListener.onDataReceived(data);
-                _size[0] -= data.length;
-                finalSize[0] += data.length;
-                if(_size[0] <= 0) adcDataListener.onCompleted(finalSize[0]);
-            }
-        });
-        return irp;
-    }
+    public abstract void asyncReadPipe(short size, ByteBuffer byteBuffer,TransferCallback callback) throws LibUsbException;
 
-    public abstract void asyncReadPipe(short size, AdcDataListener adcDataListener) throws UsbException, IOException;
+    public abstract ByteBuffer syncReadPipe(short size) throws LibUsbException;
 
-    public abstract byte[] syncReadPipe(short size) throws UsbException, IOException;
-
-    public UsbEndpoint getUsbEndpoint() {
-        return usbEndpoint;
-    }
-
-    public UsbEndpointDescriptor getDescriptor() {
-        return descriptor;
-    }
+    public abstract void syncReadPipe(short size, ByteBuffer byteBuffer) throws LibUsbException;
 
     public short getMaxPacketSize() {
-        return maxPacketSize;
+        return endpointDescriptor.wMaxPacketSize();
     }
 
     public short getPacketSize() {
         return packetSize;
-    }
-
-    public void openPipe() throws UsbException {
-        pipe.open();
-        isPipeOpen = true;
-    }
-
-    public void closePipe() throws UsbException {
-        pipe.close();
-        isPipeOpen = false;
-    }
-
-    public void close() throws UsbException {
-        closePipe();
     }
 }

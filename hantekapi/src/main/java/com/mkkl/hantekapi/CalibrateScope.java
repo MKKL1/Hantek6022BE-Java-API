@@ -1,12 +1,12 @@
 package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.Channels;
-import com.mkkl.hantekapi.communication.adcdata.ScopeDataReader;
+import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.VoltageRange;
+import org.usb4java.LibUsbException;
 
-import javax.usb.UsbException;
 import java.io.IOException;
 
 public class CalibrateScope {
@@ -15,7 +15,7 @@ public class CalibrateScope {
      * Calculates calibration values.
      * Use only when 0V are applied to both channels
      */
-    public static CalibrationData fastCalibration(Oscilloscope oscilloscope,ScopeDataReader reader) {
+    public static CalibrationData fastCalibration(Oscilloscope oscilloscope, SyncScopeDataReader reader) {
         CalibrationData calibrationData = new CalibrationData();
         try {
             for (VoltageRange voltageRange : VoltageRange.values()) {
@@ -36,7 +36,7 @@ public class CalibrateScope {
                         ScopeUtils.readRawAverages(oscilloscope, reader, (short) (512*12), 2)[0]+128);
             }
             return calibrationData;
-        } catch (UsbException | InterruptedException | IOException e) {
+        } catch (LibUsbException | InterruptedException | IOException e) {
             e.printStackTrace();
             return null;
         }

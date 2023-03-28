@@ -1,6 +1,5 @@
 package com.mkkl.hantekapi.exceptions;
 
-import javax.usb.UsbException;
 import java.io.IOException;
 import java.util.Objects;
 
@@ -10,12 +9,16 @@ public class UncheckedUsbException extends RuntimeException{
         super(message, Objects.requireNonNull(cause));
     }
 
+    public UncheckedUsbException(String message) {
+        super(message);
+    }
+
     public UncheckedUsbException(Throwable cause) {
         super(Objects.requireNonNull(cause));
     }
 
     @Override
-    public UsbException getCause() {
-        return (UsbException) super.getCause();
+    public Exception getCause() {
+        return (Exception) super.getCause();
     }
 }

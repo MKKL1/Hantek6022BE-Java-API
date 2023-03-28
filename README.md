@@ -31,8 +31,8 @@ oscilloscope.setCalibration(oscilloscope.readCalibrationValues());
 ```
 Read data from device
 ```java
-ScopeDataReader scopeDataReader = oscilloscope.createDataReader();
-byte[] bytes = scopeDataReader.syncRead((short) 1024);
+ScopeDataReader syncScopeDataReader = oscilloscope.createDataReader();
+byte[] bytes = syncScopeDataReader.syncRead((short) 1024);
 AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), oscilloscope);
 int readBytes = 0;
 while (readBytes < bytes.length) {

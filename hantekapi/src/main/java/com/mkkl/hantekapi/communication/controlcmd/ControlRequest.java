@@ -1,11 +1,15 @@
 package com.mkkl.hantekapi.communication.controlcmd;
 
-import javax.usb.UsbControlIrp;
-import javax.usb.UsbDevice;
-import javax.usb.UsbException;
-import java.util.Arrays;
+import org.usb4java.Device;
+import org.usb4java.DeviceHandle;
+import org.usb4java.LibUsb;
+import org.usb4java.LibUsbException;
+
+import java.nio.ByteBuffer;
 
 public class ControlRequest {
+    public static long timeout = 0;
+
     private final byte requestType;
     private final byte address;
     private final short wValue;
@@ -42,16 +46,18 @@ public class ControlRequest {
     }
 
 
-    public void write(UsbDevice device) throws UsbException {
-        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
-        irp.setData(data);
-        device.syncSubmit(irp);
+    public void write(DeviceHandle handle) throws LibUsbException {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(data.length);
+        buffer.put(data);
+        int transfered = LibUsb.controlTransfer(handle, requestType, address, wValue, wIndex, buffer, timeout);
+        if(transfered < 0) throw new LibUsbException("Control transfer failed", transfered);
     }
 
-    public byte[] read(UsbDevice device) throws UsbException {
-        UsbControlIrp irp = device.createUsbControlIrp(requestType, address, wValue, wIndex);
-        irp.setData(data);
-        device.syncSubmit(irp);
-        return irp.getData();
+    public byte[] read(DeviceHandle handle) throws LibUsbException {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(data.length);
+        int transfered = LibUsb.controlTransfer(handle, requestType, address, wValue, wIndex, buffer, timeout);
+        if(transfered < 0) throw new LibUsbException("Control transfer failed", transfered);
+        buffer.get(data);
+        return data;
     }
 }

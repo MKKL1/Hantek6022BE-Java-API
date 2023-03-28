@@ -3,6 +3,8 @@ package com.mkkl.hantekapi.examples;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.ScopeUtils;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
+import com.mkkl.hantekapi.communication.adcdata.AsyncScopeDataReader;
+import com.mkkl.hantekapi.communication.adcdata.ByteArrayCallback;
 import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.constants.HantekDevices;
@@ -14,6 +16,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class Main {
@@ -48,30 +51,47 @@ public class Main {
             DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
             df.setMaximumFractionDigits(340);
             float a = oscilloscope.getCurrentSampleRate().timeBetweenTwoPoints();
-            float b = 0;
-            int i = 0;
+            final float[] b = {0};
+            final int[] i = {0};
             //Creating reader for voltage data
-            SyncScopeDataReader syncScopeDataReader = oscilloscope.createSyncDataReader();
+            AsyncScopeDataReader asyncDataReader = oscilloscope.createAsyncDataReader();
 
             //Reading data from oscilloscope with given length, 1024 means 512 bytes are read from each channel
-            byte[] bytes = syncScopeDataReader.readToByteArray((short) 1024);
-            //Creating input stream for formatting output data of oscilloscope data reader
-            AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), oscilloscope);
-            int readBytes = lengthToSkip;
-            //Skipping corrupted data
-            input.skipNBytes(lengthToSkip);
-            while (readBytes < bytes.length) {
-                //Formatting raw data from device to human-readable voltages by calibration values set earlier
-                //If you use 10x probe use oscilloscope.getChannel(channel).setProbeMultiplier(10)
-                float[] f = input.readFormattedVoltages();
-                //System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
-                writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
-                b += a;
-                i++;
-                readBytes += 2;
-            }
+            Oscilloscope finalOscilloscope = oscilloscope;
+            ByteArrayCallback byteArrayCallback = new ByteArrayCallback() {
+                @Override
+                public void onDataReceived(byte[] bytes) {
+                    try {
+                        //TODO pass received data to processing thread
+                        //Creating input stream for formatting output data of oscilloscope data reader
+                        AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), finalOscilloscope);
+                        int readBytes = 0;
+                        //Skipping corrupted data
+                        //input.skipNBytes(lengthToSkip);
+                        while (readBytes < bytes.length) {
+                            //Formatting raw data from device to human-readable voltages by calibration values set earlier
+                            //If you use 10x probe use oscilloscope.getChannel(channel).setProbeMultiplier(10)
+                            float[] f = input.readFormattedVoltages();
+                            System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
+                            writer.write(df.format(b[0]) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
+                            b[0] += a;
+                            i[0]++;
+                            readBytes += 2;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+            asyncDataReader.registerListener(byteArrayCallback);
+            oscilloscope.startCapture();
+            for(int _i = 0; _i < 10; _i++)
+                asyncDataReader.read((short) 1024);
+            asyncDataReader.waitToFinish();
+            oscilloscope.stopCapture();
+            System.out.println("i = " + i[0]);
 
-        } catch (IOException | LibUsbException e) {
+        } catch (IOException | LibUsbException | InterruptedException e) {
             e.printStackTrace();
         } finally {
             try {
