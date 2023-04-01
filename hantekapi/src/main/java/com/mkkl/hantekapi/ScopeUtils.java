@@ -2,7 +2,7 @@ package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
-import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
+import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
 import com.mkkl.hantekapi.constants.HantekDevices;
 import com.mkkl.hantekapi.devicemanager.HantekDeviceList;
 import com.mkkl.hantekapi.devicemanager.OscilloscopeManager;

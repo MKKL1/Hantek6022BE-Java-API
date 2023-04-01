@@ -29,12 +29,27 @@ public class IsochronousEndpoint extends Endpoint {
     }
 
     @Override
+    public void asyncReadPipe(Transfer transfer) throws LibUsbException {
+
+    }
+
+    @Override
     public ByteBuffer syncReadPipe(short size) throws LibUsbException {
 //        ByteBuffer buffer = ByteBuffer.allocateDirect(size);
 //        IntBuffer transferred = IntBuffer.allocate(1);
 //        int result = LibUsb.(deviceHandle, endpointAddress, buffer, transferred, timeout);
 //        if (result != LibUsb.SUCCESS) throw new LibUsbException("Control transfer failed", result);
 //        return buffer;
+        return null;
+    }
+
+    @Override
+    public Transfer getTransfer(ByteBuffer byteBuffer, TransferCallback callback) {
+        return null;
+    }
+
+    @Override
+    public Transfer getTransfer(int size, TransferCallback callback) {
         return null;
     }
 

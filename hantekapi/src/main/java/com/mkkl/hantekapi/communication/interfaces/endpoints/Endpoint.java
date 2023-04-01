@@ -25,7 +25,13 @@ public abstract class Endpoint {
 
     public abstract void asyncReadPipe(short size, ByteBuffer byteBuffer,TransferCallback callback) throws LibUsbException;
 
+    public abstract void asyncReadPipe(Transfer transfer) throws LibUsbException;
+
     public abstract ByteBuffer syncReadPipe(short size) throws LibUsbException;
+
+    public abstract Transfer getTransfer(ByteBuffer byteBuffer, TransferCallback callback);
+
+    public abstract Transfer getTransfer(int size, TransferCallback callback);
 
     public abstract void syncReadPipe(short size, ByteBuffer byteBuffer) throws LibUsbException;
 

@@ -3,9 +3,8 @@ package com.mkkl.hantekapi.examples;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.ScopeUtils;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
-import com.mkkl.hantekapi.communication.adcdata.AsyncScopeDataReader;
-import com.mkkl.hantekapi.communication.adcdata.ByteArrayCallback;
-import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
+import com.mkkl.hantekapi.communication.readers.async.AsyncScopeDataReader;
+import com.mkkl.hantekapi.communication.readers.ByteArrayCallback;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.constants.HantekDevices;
 import org.usb4java.LibUsbException;
@@ -16,7 +15,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.Arrays;
 import java.util.Locale;
 
 public class Main {

@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi.communication.adcdata;
+package com.mkkl.hantekapi.communication.readers;
 
 import org.usb4java.Transfer;
 

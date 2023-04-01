@@ -1,7 +1,7 @@
 package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.Channels;
-import com.mkkl.hantekapi.communication.adcdata.SyncScopeDataReader;
+import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.constants.SampleRates;
 import com.mkkl.hantekapi.constants.VoltageRange;

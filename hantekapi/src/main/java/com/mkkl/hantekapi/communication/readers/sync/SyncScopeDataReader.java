@@ -1,13 +1,11 @@
-package com.mkkl.hantekapi.communication.adcdata;
+package com.mkkl.hantekapi.communication.readers.sync;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
-import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
-import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
+import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
+import com.mkkl.hantekapi.communication.readers.ScopeDataReader;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.function.Consumer;
 
 /**
  * Class used for reading data from usb endpoints.

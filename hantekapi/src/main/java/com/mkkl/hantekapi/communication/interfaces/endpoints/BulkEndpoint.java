@@ -15,6 +15,12 @@ public class BulkEndpoint extends Endpoint{
     }
 
     @Override
+    public void asyncReadPipe(Transfer transfer) throws LibUsbException {
+        int result = LibUsb.submitTransfer(transfer);
+        if (result < 0) throw new LibUsbException("Unable to submit transfer", result);
+    }
+
+    @Override
     public void asyncReadPipe(short size, TransferCallback callback) throws LibUsbException {
         ByteBuffer buffer = ByteBuffer.allocateDirect(size);
         asyncReadPipe(size, buffer, callback);
@@ -22,10 +28,7 @@ public class BulkEndpoint extends Endpoint{
 
     @Override
     public void asyncReadPipe(short size, ByteBuffer byteBuffer, TransferCallback callback) throws LibUsbException {
-        Transfer transfer = LibUsb.allocTransfer();
-        LibUsb.fillBulkTransfer(transfer, deviceHandle, endpointAddress, byteBuffer, callback, null, timeout);
-        int result = LibUsb.submitTransfer(transfer);
-        if (result < 0) throw new LibUsbException("Unable to submit transfer", result);
+        asyncReadPipe(getTransfer(byteBuffer, callback));
     }
 
     @Override
@@ -33,6 +36,18 @@ public class BulkEndpoint extends Endpoint{
         ByteBuffer buffer = ByteBuffer.allocateDirect(size);
         syncReadPipe(size, buffer);
         return buffer;
+    }
+
+    @Override
+    public Transfer getTransfer(ByteBuffer byteBuffer, TransferCallback callback) {
+        Transfer transfer = LibUsb.allocTransfer();
+        LibUsb.fillBulkTransfer(transfer, deviceHandle, endpointAddress, byteBuffer, callback, null, timeout);
+        return transfer;
+    }
+
+    @Override
+    public Transfer getTransfer(int size, TransferCallback callback) {
+        return getTransfer(ByteBuffer.allocateDirect(size), callback);
     }
 
     @Override

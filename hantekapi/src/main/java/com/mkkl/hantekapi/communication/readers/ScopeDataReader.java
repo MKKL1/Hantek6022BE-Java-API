@@ -1,4 +1,4 @@
-package com.mkkl.hantekapi.communication.adcdata;
+package com.mkkl.hantekapi.communication.readers;
 
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
@@ -18,5 +18,9 @@ public abstract class ScopeDataReader implements Closeable {
         this.oscilloscope = oscilloscope;
         endpoint = oscilloscope.getScopeInterface().getEndpoint();
         defaultSize = endpoint.getPacketSize();
+    }
+
+    public Endpoint getEndpoint() {
+        return endpoint;
     }
 }
