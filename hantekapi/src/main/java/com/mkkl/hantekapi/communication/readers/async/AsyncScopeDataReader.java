@@ -15,7 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class AsyncScopeDataReader extends ScopeDataReader {
     private final EventHandlingThread eventHandlingThread;
-    private final DataRequestProcessorThread dataRequestProcessorThread;
+    private final TransferProcessorThread transferProcessorThread;
     protected final BlockingQueue<Transfer> transferQueue;
     protected final List<UsbDataListener> listenerList = new ArrayList<UsbDataListener>();
     protected final TransferCallback transferCallback;
@@ -27,14 +27,14 @@ public class AsyncScopeDataReader extends ScopeDataReader {
         eventHandlingThread = new EventHandlingThread(LibUsbInstance.getContext());
         eventHandlingThread.start();
 
-        dataRequestProcessorThread = new DataRequestProcessorThread(endpoint, transferQueue, outstandingPackets);
-        dataRequestProcessorThread.start();
+        transferProcessorThread = new TransferProcessorThread(endpoint, transferQueue, outstandingPackets);
+        transferProcessorThread.start();
 
         transferCallback = this::initializeCallback;
     }
 
     protected void initializeCallback(Transfer transfer) {
-        dataRequestProcessorThread.notifyReceivedPacket();
+        transferProcessorThread.notifyReceivedPacket();
         for(UsbDataListener usbDataListener : listenerList)
             usbDataListener.processTransfer(transfer);
     }
@@ -70,8 +70,8 @@ public class AsyncScopeDataReader extends ScopeDataReader {
     }
 
     public void waitToFinish() throws InterruptedException {
-        dataRequestProcessorThread.finish();
-        dataRequestProcessorThread.join();
+        transferProcessorThread.finish();
+        transferProcessorThread.join();
 
         eventHandlingThread.abort();
         eventHandlingThread.join();
@@ -86,9 +86,9 @@ public class AsyncScopeDataReader extends ScopeDataReader {
             throw new IOException("Failed to join EventHandlingThread, action was interrupted");
         }
 
-        dataRequestProcessorThread.abort();
+        transferProcessorThread.abort();
         try {
-            dataRequestProcessorThread.join();
+            transferProcessorThread.join();
         } catch (InterruptedException e) {
             throw new IOException("Failed to join DataRequestProcessorThread, action was interrupted");
         }

@@ -6,7 +6,7 @@ import org.usb4java.Transfer;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-class DataRequestProcessorThread extends Thread {
+class TransferProcessorThread extends Thread {
     private volatile boolean abort = false;
     private volatile boolean finish = false;
     private final Endpoint endpoint;
@@ -14,7 +14,8 @@ class DataRequestProcessorThread extends Thread {
     private final int outstandingTransfers;
     private final AtomicInteger transfersInKernel = new AtomicInteger(0);
 
-    public DataRequestProcessorThread(Endpoint endpoint, BlockingQueue<Transfer> transferBlockingQueue, int outstandingTransfers) {
+    public TransferProcessorThread(Endpoint endpoint, BlockingQueue<Transfer> transferBlockingQueue, int outstandingTransfers) {
+        super("Transfer Processor Thread");
         this.endpoint = endpoint;
         this.transferBlockingQueue = transferBlockingQueue;
         this.outstandingTransfers = outstandingTransfers;
@@ -39,8 +40,7 @@ class DataRequestProcessorThread extends Thread {
 
     @Override
     public void run() {
-        while (!Thread.currentThread()
-                .isInterrupted() && !abort) {
+        while (!isInterrupted() && !abort) {
             try {
                 //Waiting for transfers in kernel to be smaller than required value
                 while (transfersInKernel.get() >= outstandingTransfers) {
@@ -65,8 +65,7 @@ class DataRequestProcessorThread extends Thread {
                 //Incrementing transfers in kernel local value
                 transfersInKernel.incrementAndGet();
             } catch (InterruptedException e) {
-                Thread.currentThread()
-                        .interrupt();
+                interrupt();
             }
 
         }

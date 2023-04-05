@@ -5,6 +5,13 @@ import org.usb4java.Transfer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Oscilloscope sample data reader that extends {@link AsyncScopeDataReader}.
+ * It's main purpose is to reuse transfers to not have to initialize and free them,
+ * saving a lot of processing power in high-speed applications
+ * while sacrificing some memory for buffer overhead.
+ * Main downside is that you cannot change size of data to be read after initialization.
+ */
 public class ReuseTransferAsyncReader extends AsyncScopeDataReader{
     private final ByteBuffer[] availableBuffers;
     private final Transfer[] availableTransfers;
@@ -29,6 +36,10 @@ public class ReuseTransferAsyncReader extends AsyncScopeDataReader{
         transferQueue.put(getNextTransfer());
     }
 
+    /**
+     * Used internally for accessing next, ideally not used, transfer in array.
+     * @return Transfer in {@link #availableTransfers} of {@link #position}+1
+     */
     public synchronized Transfer getNextTransfer() {
         if(position >= savedLength) resetPosition();
         availableBuffers[position].clear();
