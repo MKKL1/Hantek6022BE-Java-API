@@ -3,6 +3,7 @@ package com.mkkl.hantekapi.capture;
 import com.mkkl.hantekapi.InitializeScopeExtension;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 @ExtendWith(InitializeScopeExtension.class)
@@ -21,6 +23,11 @@ public class SyncCaptureTest {
     static void setUp() {
         oscilloscope = InitializeScopeExtension.getOscilloscope();
         syncScopeDataReader = new SyncScopeDataReader(oscilloscope);
+    }
+
+    @AfterAll
+    static void close() throws IOException {
+        syncScopeDataReader.close();
     }
 
     @ParameterizedTest
