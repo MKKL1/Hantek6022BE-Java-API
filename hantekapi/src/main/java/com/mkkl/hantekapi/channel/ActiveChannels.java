@@ -25,4 +25,8 @@ public enum ActiveChannels {
     public int getActiveCount() {
         return activeCount;
     }
+
+    public boolean singleMode() {
+        return activeCount==1;
+    }
 }

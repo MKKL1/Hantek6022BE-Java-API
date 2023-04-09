@@ -25,7 +25,7 @@ public class ScopeUtils {
         for (int i = 0; i < repeat; i++) {
             oscilloscope.startCapture();
             byte[] data = reader.readToByteArray(size);
-            AdcInputStream inputStream = new AdcInputStream(new ByteArrayInputStream(data), oscilloscope);
+            AdcInputStream inputStream = AdcInputStream.create(new ByteArrayInputStream(data), oscilloscope);
             int sizeToRead = data.length;
             try {
                 while (sizeToRead > 0) {

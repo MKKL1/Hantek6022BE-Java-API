@@ -62,7 +62,7 @@ public class Main {
                     try {
                         //TODO pass received data to processing thread
                         //Creating input stream for formatting output data of oscilloscope data reader
-                        AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), finalOscilloscope);
+                        AdcInputStream input = AdcInputStream.create(new ByteArrayInputStream(bytes), finalOscilloscope);
                         int readBytes = 0;
                         //Skipping corrupted data
                         //input.skipNBytes(lengthToSkip);

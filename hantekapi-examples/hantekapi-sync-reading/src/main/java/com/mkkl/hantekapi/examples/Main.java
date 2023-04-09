@@ -2,10 +2,13 @@ package com.mkkl.hantekapi.examples;
 
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.ScopeUtils;
+import com.mkkl.hantekapi.channel.ActiveChannels;
+import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.constants.HantekDevices;
+import com.mkkl.hantekapi.constants.VoltageRange;
 import org.usb4java.LibUsbException;
 
 import java.io.BufferedWriter;
@@ -56,7 +59,7 @@ public class Main {
             //Reading data from oscilloscope with given length, 1024 means 512 bytes are read from each channel
             byte[] bytes = syncScopeDataReader.readToByteArray((short) 1024);
             //Creating input stream for formatting output data of oscilloscope data reader
-            AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), oscilloscope);
+            AdcInputStream input = AdcInputStream.create(new ByteArrayInputStream(bytes), oscilloscope);
             int readBytes = lengthToSkip;
             //Skipping corrupted data
             input.skipNBytes(lengthToSkip);
@@ -64,7 +67,7 @@ public class Main {
                 //Formatting raw data from device to human-readable voltages by calibration values set earlier
                 //If you use 10x probe use oscilloscope.getChannel(channel).setProbeMultiplier(10)
                 float[] f = input.readFormattedVoltages();
-                //System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
+                System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
                 writer.write(df.format(b) + "," + df.format(f[0]) + "," + df.format(f[1]) + System.lineSeparator());
                 b += a;
                 i++;
