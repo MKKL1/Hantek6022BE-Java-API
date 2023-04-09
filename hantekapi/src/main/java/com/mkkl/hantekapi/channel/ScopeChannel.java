@@ -107,7 +107,7 @@ public class ScopeChannel {
     }
 
     public void setVoltageRange(int gainId) {
-        setVoltageRange(Arrays.stream(VoltageRange.values()).filter(x -> x.getGainId() == x.getGainMiliV()).findFirst().orElseThrow());
+        setVoltageRange(Arrays.stream(VoltageRange.values()).filter(x -> x.getGainId() == gainId).findFirst().orElseThrow());
     }
 
     /**
