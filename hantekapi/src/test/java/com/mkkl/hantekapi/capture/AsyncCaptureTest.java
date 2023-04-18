@@ -6,9 +6,7 @@ import com.mkkl.hantekapi.communication.readers.BufferedCallback;
 import com.mkkl.hantekapi.communication.readers.ByteArrayCallback;
 import com.mkkl.hantekapi.communication.readers.UsbDataListener;
 import com.mkkl.hantekapi.communication.readers.async.AsyncScopeDataReader;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -18,6 +16,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 
 @ExtendWith(InitializeScopeExtension.class)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AsyncCaptureTest {
     static AsyncScopeDataReader asyncScopeDataReader;
     static Oscilloscope oscilloscope;
@@ -35,6 +34,7 @@ public class AsyncCaptureTest {
     }
 
     @ParameterizedTest
+    @Order(1)
     @ValueSource(shorts = {512, 1024, 2048})
     public void readingBufferTest(short size) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
@@ -61,6 +61,7 @@ public class AsyncCaptureTest {
     }
 
     @ParameterizedTest
+    @Order(2)
     @ValueSource(shorts = {512, 1024, 2048})
     public void readingArrayTest(short size) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
