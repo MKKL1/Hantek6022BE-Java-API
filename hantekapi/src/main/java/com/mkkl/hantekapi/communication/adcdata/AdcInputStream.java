@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi.communication.adcdata;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.channel.ChannelManager;
 import com.mkkl.hantekapi.channel.ScopeChannel;
@@ -29,9 +30,9 @@ public abstract class AdcInputStream extends FilterInputStream{
         return AdcInputStream.create(in, channelManager, packetSize, channelManager.getActiveChannels());
     }
 
-    public static AdcInputStream create(InputStream in, Oscilloscope oscilloscope) {
-        ChannelManager channelManager = oscilloscope.getChannelManager();
-        int packetSize = oscilloscope.getScopeInterface().getEndpoint().getPacketSize();
+    public static AdcInputStream create(InputStream in, OscilloscopeHandle oscilloscopeHandle) {
+        ChannelManager channelManager = oscilloscopeHandle.getChannelManager();
+        int packetSize = oscilloscopeHandle.getScopeInterface().getEndpoint().getPacketSize();
 
         if(channelManager.getActiveChannels().isSingleMode())
             return new SingleModeADCStream(in, channelManager, packetSize);

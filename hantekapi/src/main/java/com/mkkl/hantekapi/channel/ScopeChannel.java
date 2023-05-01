@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.communication.controlcmd.HantekRequestFactory;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
@@ -20,7 +21,7 @@ import java.util.Map;
  * </ul>
  */
 public class ScopeChannel {
-    private final Oscilloscope oscilloscope;
+    private final OscilloscopeHandle oscilloscopeHandle;
     private final ChannelManager channelManager;
     private final Channels id;
 
@@ -47,19 +48,19 @@ public class ScopeChannel {
     //Used to temporarily save data from AdcInputStream for reading from channel
     public float currentData;
 
-    private ScopeChannel(Oscilloscope oscilloscope,ChannelManager channelManager, Channels id) {
-        this.oscilloscope = oscilloscope;
+    private ScopeChannel(OscilloscopeHandle oscilloscopeHandle,ChannelManager channelManager, Channels id) {
+        this.oscilloscopeHandle = oscilloscopeHandle;
         this.channelManager = channelManager;
         this.id = id;
         recalculate_scalefactor();
     }
 
-    public static ScopeChannel create(Oscilloscope oscilloscope,ChannelManager channelManager, Channels id) {
-        return new ScopeChannel(oscilloscope,channelManager, id);
+    public static ScopeChannel create(OscilloscopeHandle oscilloscopeHandle, ChannelManager channelManager, Channels id) {
+        return new ScopeChannel(oscilloscopeHandle,channelManager, id);
     }
 
-    public static ScopeChannel create(Oscilloscope oscilloscope,ChannelManager channelManager, int id) {
-        return new ScopeChannel(oscilloscope,channelManager,
+    public static ScopeChannel create(OscilloscopeHandle oscilloscopeHandle,ChannelManager channelManager, int id) {
+        return new ScopeChannel(oscilloscopeHandle,channelManager,
                 Arrays.stream(Channels.values())
                         .filter(x -> x.getChannelId() == id)
                         .findFirst()
@@ -99,9 +100,9 @@ public class ScopeChannel {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
         if(id == Channels.CH1)
-            oscilloscope.patch(HantekRequestFactory.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId()))
+            oscilloscopeHandle.patch(HantekRequestFactory.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId()))
                     .onFailureThrow((ex) -> new RuntimeException(ex));
-        else oscilloscope.patch(HantekRequestFactory.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId()))
+        else oscilloscopeHandle.patch(HantekRequestFactory.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId()))
                 .onFailureThrow((ex) -> new RuntimeException(ex));
     }
 

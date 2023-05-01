@@ -12,7 +12,7 @@ import java.util.NoSuchElementException;
 public class InitializeScopeExtension implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
 
     private static boolean started = false;
-    private static Oscilloscope oscilloscope;
+    private static OscilloscopeHandle oscilloscopeHandle;
 
     @Override
     public void beforeAll(ExtensionContext extensionContext) throws Exception {
@@ -22,11 +22,12 @@ public class InitializeScopeExtension implements BeforeAllCallback, ExtensionCon
 
             Assertions.assertNotEquals(hantekDeviceList.getConnections().size(), 0, "No device was connected");
             final Oscilloscope[] oscilloscope = {hantekDeviceList.getConnections().get(0).oscilloscope()};
+            final OscilloscopeHandle[] oscilloscopeHandle = {oscilloscope[0].setup()};
             Assertions.assertNotNull(oscilloscope[0], "Failed to get oscilloscope");
 
             int tries = 20;
             if (!oscilloscope[0].isFirmwarePresent()) {
-                oscilloscope[0].flash_firmware();
+                oscilloscopeHandle[0].flash_firmware();
                 while(oscilloscope[0] == null || !oscilloscope[0].isFirmwarePresent()) {
                     Thread.sleep(100);
                     try {
@@ -39,17 +40,16 @@ public class InitializeScopeExtension implements BeforeAllCallback, ExtensionCon
                 }
             }
 
-            oscilloscope[0].setup();
-            InitializeScopeExtension.oscilloscope = oscilloscope[0];
+            InitializeScopeExtension.oscilloscopeHandle = oscilloscope[0].setup();
         }
     }
 
     @Override
     public void close() throws Throwable {
-        InitializeScopeExtension.getOscilloscope().close();
+        InitializeScopeExtension.getOscilloscopeHandle().close();
     }
 
-    public static Oscilloscope getOscilloscope() {
-        return oscilloscope;
+    public static OscilloscopeHandle getOscilloscopeHandle() {
+        return oscilloscopeHandle;
     }
 }

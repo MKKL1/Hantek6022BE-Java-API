@@ -15,17 +15,17 @@ import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
 public class ScopeUtils {
-    public static float[] readRawAverages(Oscilloscope oscilloscope, SyncScopeDataReader reader, short size, int repeat) throws InterruptedException, IOException {
-        final boolean single = oscilloscope.getCurrentSampleRate().isSingleChannel();
-        if(single) oscilloscope.setActiveChannels(ActiveChannels.CH1);
-        else oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
+    public static float[] readRawAverages(OscilloscopeHandle oscilloscopeHandle, SyncScopeDataReader reader, short size, int repeat) throws InterruptedException, IOException {
+        final boolean single = oscilloscopeHandle.getCurrentSampleRate().isSingleChannel();
+        if(single) oscilloscopeHandle.setActiveChannels(ActiveChannels.CH1);
+        else oscilloscopeHandle.setActiveChannels(ActiveChannels.CH1CH2);
 
         ArrayList<Byte> channel1Data = new ArrayList<>();
         ArrayList<Byte> channel2Data = new ArrayList<>();
         for (int i = 0; i < repeat; i++) {
-            oscilloscope.startCapture();
+            oscilloscopeHandle.startCapture();
             byte[] data = reader.readToByteArray(size);
-            AdcInputStream inputStream = AdcInputStream.create(new ByteArrayInputStream(data), oscilloscope);
+            AdcInputStream inputStream = AdcInputStream.create(new ByteArrayInputStream(data), oscilloscopeHandle);
             int sizeToRead = data.length;
             try {
                 while (sizeToRead > 0) {
@@ -40,16 +40,16 @@ public class ScopeUtils {
                 throw new UncheckedIOException(e);
             }
 
-            oscilloscope.stopCapture();
+            oscilloscopeHandle.stopCapture();
             Thread.sleep(100);
         }
         return new float[] {channel1Data.size() != 0 ? (channel1Data.stream().mapToInt(Byte::intValue).sum()/(float)channel1Data.size()) : 0f,
                             channel2Data.size() != 0 ? (channel2Data.stream().mapToInt(Byte::intValue).sum()/(float)channel2Data.size()) : 0f};
     }
 
-    public static float[] readRawAverages(Oscilloscope oscilloscope, short size, int repeat) throws Exception {
-        try(SyncScopeDataReader reader = new SyncScopeDataReader(oscilloscope)) {
-            return readRawAverages(oscilloscope, reader, size, repeat);
+    public static float[] readRawAverages(OscilloscopeHandle oscilloscopeHandle, short size, int repeat) throws Exception {
+        try(SyncScopeDataReader reader = new SyncScopeDataReader(oscilloscopeHandle)) {
+            return readRawAverages(oscilloscopeHandle, reader, size, repeat);
         }
     }
 
@@ -57,12 +57,12 @@ public class ScopeUtils {
         HantekDeviceList hantekDeviceList = OscilloscopeManager.findSupportedDevices();
         //Find connected oscilloscopes of type DSO6022BE and choose first found
         Oscilloscope oscilloscope = hantekDeviceList.getFirstFound(hantekDeviceType);
-
+        OscilloscopeHandle oscilloscopeHandle = oscilloscope.setup();
         int tries = 20;
         //Check if software is found, if not flash new firmware
         if (!oscilloscope.isFirmwarePresent()) {
             //flashing firmware with openhantek's alternative for given device (in this case DSO6022BE)
-            oscilloscope.flash_firmware();
+            oscilloscopeHandle.flash_firmware();
             //Waiting for device with flashed firmware to appear
             while(oscilloscope == null || !oscilloscope.isFirmwarePresent()) {
                 Thread.sleep(100);

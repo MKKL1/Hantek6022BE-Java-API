@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi.communication.readers.sync;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.readers.ScopeDataReader;
 
@@ -12,8 +13,8 @@ import java.nio.ByteBuffer;
  */
 public class SyncScopeDataReader extends ScopeDataReader {
 
-    public SyncScopeDataReader(Oscilloscope oscilloscope) {
-        super(oscilloscope);
+    public SyncScopeDataReader(OscilloscopeHandle oscilloscopeHandle) {
+        super(oscilloscopeHandle);
     }
 
     /**
@@ -22,7 +23,7 @@ public class SyncScopeDataReader extends ScopeDataReader {
      * @return raw ADC data. Use {@link AdcInputStream} to format this output
      */
     public ByteBuffer readToBuffer(short size) {
-        oscilloscope.ensureCaptureStarted();
+        oscilloscopeHandle.ensureCaptureStarted();
         return endpoint.syncReadPipe(size);
     }
 

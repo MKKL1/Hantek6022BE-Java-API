@@ -2,6 +2,7 @@ package com.mkkl.hantekapi.communication.readers.async;
 
 import com.mkkl.hantekapi.LibUsbInstance;
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.communication.readers.ScopeDataReader;
 import com.mkkl.hantekapi.communication.readers.UsbDataListener;
 import org.usb4java.*;
@@ -20,8 +21,8 @@ public class AsyncScopeDataReader extends ScopeDataReader {
     protected final List<UsbDataListener> listenerList = new ArrayList<UsbDataListener>();
     protected final TransferCallback transferCallback;
 
-    public AsyncScopeDataReader(Oscilloscope oscilloscope, int outstandingPackets) {
-        super(oscilloscope);
+    public AsyncScopeDataReader(OscilloscopeHandle oscilloscopeHandle, int outstandingPackets) {
+        super(oscilloscopeHandle);
         transferQueue = new LinkedBlockingQueue<>();
 
         eventHandlingThread = new EventHandlingThread(LibUsbInstance.getContext());
@@ -39,8 +40,8 @@ public class AsyncScopeDataReader extends ScopeDataReader {
             usbDataListener.processTransfer(transfer);
     }
 
-    public AsyncScopeDataReader(Oscilloscope oscilloscope) {
-        this(oscilloscope, 3);
+    public AsyncScopeDataReader(OscilloscopeHandle oscilloscopeHandle) {
+        this(oscilloscopeHandle, 3);
     }
 
     public void registerListener(UsbDataListener usbDataListener) {
@@ -56,12 +57,12 @@ public class AsyncScopeDataReader extends ScopeDataReader {
     }
 
     public void read(short size) throws InterruptedException {
-        oscilloscope.ensureCaptureStarted();
+        oscilloscopeHandle.ensureCaptureStarted();
         transferQueue.put(endpoint.getTransfer(size, transferCallback));
     }
 
     public void read(ByteBuffer byteBuffer) throws InterruptedException {
-        oscilloscope.ensureCaptureStarted();
+        oscilloscopeHandle.ensureCaptureStarted();
         transferQueue.put(endpoint.getTransfer(byteBuffer, transferCallback));
     }
 

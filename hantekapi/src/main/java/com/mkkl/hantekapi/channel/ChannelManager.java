@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.communication.controlcmd.HantekRequestFactory;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
 import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
@@ -15,26 +16,26 @@ public class ChannelManager {
     private final int channelCount;
     private final ArrayList<ScopeChannel> scopeChannels = new ArrayList<>(); //TODO can be replaced with array or hashmap
     private ActiveChannels activeChannels = ActiveChannels.CH1CH2;
-    private final Oscilloscope oscilloscope;
+    private final OscilloscopeHandle oscilloscopeHandle;
 
-    private ChannelManager(Oscilloscope oscilloscope) {
+    private ChannelManager(OscilloscopeHandle oscilloscopeHandle) {
         this.channelCount = Channels.values().length;
-        this.oscilloscope = oscilloscope;
+        this.oscilloscopeHandle = oscilloscopeHandle;
         for(Channels ch : Channels.values())
-            scopeChannels.add(ScopeChannel.create(oscilloscope,this, ch));
+            scopeChannels.add(ScopeChannel.create(oscilloscopeHandle,this, ch));
         //Making absolute sure that [CH1, CH2]
         scopeChannels.sort(Comparator.comparingInt(o -> o.getId().getChannelId()));
     }
 
-    public static ChannelManager create(Oscilloscope oscilloscope) {
-        return new ChannelManager(oscilloscope);
+    public static ChannelManager create(OscilloscopeHandle oscilloscopeHandle) {
+        return new ChannelManager(oscilloscopeHandle);
     }
 
     /**
      * Sets number of active channels for future reference.
      */
     public void setActiveChannelCount(ActiveChannels activeChannels) {
-        oscilloscope.patch(HantekRequestFactory.getChangeChCountRequest((byte) activeChannels.getActiveCount()))
+        oscilloscopeHandle.patch(HantekRequestFactory.getChangeChCountRequest((byte) activeChannels.getActiveCount()))
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set active channels ", ex))
                 .onSuccess(() -> this.activeChannels = activeChannels);
     }

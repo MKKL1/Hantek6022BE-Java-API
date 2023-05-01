@@ -2,6 +2,7 @@ package com.mkkl.hantekapi.capture;
 
 import com.mkkl.hantekapi.InitializeScopeExtension;
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.communication.readers.BufferedCallback;
 import com.mkkl.hantekapi.communication.readers.ByteArrayCallback;
 import com.mkkl.hantekapi.communication.readers.UsbDataListener;
@@ -19,12 +20,12 @@ import java.util.concurrent.CountDownLatch;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AsyncCaptureTest {
     static AsyncScopeDataReader asyncScopeDataReader;
-    static Oscilloscope oscilloscope;
+    static OscilloscopeHandle oscilloscopeHandle;
 
     @BeforeAll
     static void setUp() {
-        oscilloscope = InitializeScopeExtension.getOscilloscope();
-        asyncScopeDataReader = new AsyncScopeDataReader(oscilloscope);
+        oscilloscopeHandle = InitializeScopeExtension.getOscilloscopeHandle();
+        asyncScopeDataReader = new AsyncScopeDataReader(oscilloscopeHandle);
     }
 
     @AfterAll

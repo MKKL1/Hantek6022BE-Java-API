@@ -1,6 +1,7 @@
 package com.mkkl.hantekapi.communication.readers.async;
 
 import com.mkkl.hantekapi.Oscilloscope;
+import com.mkkl.hantekapi.OscilloscopeHandle;
 import org.usb4java.Transfer;
 
 import java.nio.ByteBuffer;
@@ -18,8 +19,8 @@ public class CachedAsyncReader extends AsyncScopeDataReader{
     private final int savedLength;
     private int position = 0;
 
-    public CachedAsyncReader(Oscilloscope oscilloscope, int bufferSize, int cachedTransferCount, int outstandingTransfers) {
-        super(oscilloscope, outstandingTransfers);
+    public CachedAsyncReader(OscilloscopeHandle oscilloscopeHandle, int bufferSize, int cachedTransferCount, int outstandingTransfers) {
+        super(oscilloscopeHandle, outstandingTransfers);
         this.savedLength = cachedTransferCount;
         cachedBuffers = new ByteBuffer[cachedTransferCount];
         cachedTransfers = new Transfer[cachedTransferCount];
@@ -32,7 +33,7 @@ public class CachedAsyncReader extends AsyncScopeDataReader{
 
     @Override
     public void read() throws InterruptedException {
-        oscilloscope.ensureCaptureStarted();
+        oscilloscopeHandle.ensureCaptureStarted();
         transferQueue.put(getNextTransfer());
     }
 
