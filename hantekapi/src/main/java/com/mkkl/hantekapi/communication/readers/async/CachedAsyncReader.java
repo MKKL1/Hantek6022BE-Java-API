@@ -13,20 +13,20 @@ import java.nio.ByteBuffer;
  * Main downside is that you cannot change size of data to be read after initialization.
  */
 public class CachedAsyncReader extends AsyncScopeDataReader{
-    private final ByteBuffer[] availableBuffers;
-    private final Transfer[] availableTransfers;
+    private final ByteBuffer[] cachedBuffers;
+    private final Transfer[] cachedTransfers;
     private final int savedLength;
     private int position = 0;
 
-    public CachedAsyncReader(Oscilloscope oscilloscope, int bufferSize, int savedTransfers, int outstandingTransfers) {
+    public CachedAsyncReader(Oscilloscope oscilloscope, int bufferSize, int cachedTransferCount, int outstandingTransfers) {
         super(oscilloscope, outstandingTransfers);
-        this.savedLength = savedTransfers;
-        availableBuffers = new ByteBuffer[savedTransfers];
-        availableTransfers = new Transfer[savedTransfers];
-        for(int i = 0; i < savedTransfers; i++) {
+        this.savedLength = cachedTransferCount;
+        cachedBuffers = new ByteBuffer[cachedTransferCount];
+        cachedTransfers = new Transfer[cachedTransferCount];
+        for(int i = 0; i < cachedTransferCount; i++) {
             ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
-            availableBuffers[i] = buffer;
-            availableTransfers[i] = endpoint.getTransfer(buffer, transferCallback);
+            cachedBuffers[i] = buffer;
+            cachedTransfers[i] = endpoint.getTransfer(buffer, transferCallback);
         }
     }
 
@@ -38,12 +38,12 @@ public class CachedAsyncReader extends AsyncScopeDataReader{
 
     /**
      * Used internally for accessing next, ideally not used, transfer in array.
-     * @return Transfer in {@link #availableTransfers} of {@link #position}+1
+     * @return Transfer in {@link #cachedTransfers} of {@link #position}+1
      */
     public synchronized Transfer getNextTransfer() {
         if(position >= savedLength) resetPosition();
-        availableBuffers[position].clear();
-        Transfer transfer = availableTransfers[position];
+        cachedBuffers[position].clear();
+        Transfer transfer = cachedTransfers[position];
         position++;
         return transfer;
     }

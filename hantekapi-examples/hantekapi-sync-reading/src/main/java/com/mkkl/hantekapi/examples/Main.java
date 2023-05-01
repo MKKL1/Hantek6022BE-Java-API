@@ -2,13 +2,10 @@ package com.mkkl.hantekapi.examples;
 
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.ScopeUtils;
-import com.mkkl.hantekapi.channel.ActiveChannels;
-import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
-import com.mkkl.hantekapi.constants.HantekDevices;
-import com.mkkl.hantekapi.constants.VoltageRange;
+import com.mkkl.hantekapi.constants.HantekDeviceType;
 import org.usb4java.LibUsbException;
 
 import java.io.BufferedWriter;
@@ -24,7 +21,7 @@ public class Main {
     public static void main(String[] args) {
         Oscilloscope oscilloscope = null;
         try {
-            oscilloscope = ScopeUtils.getAndFlashFirmware(HantekDevices.DSO6022BE);
+            oscilloscope = ScopeUtils.getAndFlashFirmware(HantekDeviceType.DSO6022BE);
         } catch (Exception e) {
             e.printStackTrace();
         }

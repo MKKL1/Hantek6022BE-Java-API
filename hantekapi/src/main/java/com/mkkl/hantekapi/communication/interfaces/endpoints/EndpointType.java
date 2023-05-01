@@ -1,6 +1,6 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
-public enum EndpointTypes {
+public enum EndpointType {
     Bulk,
     Iso
 }

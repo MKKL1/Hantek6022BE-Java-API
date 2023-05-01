@@ -1,6 +1,6 @@
 package com.mkkl.hantekapi.communication;
 
-public class UsbConnectionConst {
+public class HantekProtocolConstants {
     public static final byte RW_EEPROM_REQUEST = (byte) 0xa2;
     public static final byte RW_EEPROM_INDEX = 0x00;
 
@@ -25,7 +25,7 @@ public class UsbConnectionConst {
     public static final short SET_CH_VR_VALUE = (short) 0x00;
     public static final short SET_CH_VR_INDEX = (short) 0x00;
 
-    public static final byte SET_SAMPLE_RATE_REQUEST = (byte) 0xe2;;
+    public static final byte SET_SAMPLE_RATE_REQUEST = (byte) 0xe2;
     public static final short SET_SAMPLE_RATE_VALUE = (short) 0x00;
     public static final short SET_SAMPLE_RATE_INDEX = (short) 0x00;
 

@@ -1,13 +1,12 @@
 package com.mkkl.hantekapi.channel;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
+import com.mkkl.hantekapi.communication.controlcmd.HantekRequestFactory;
 import com.mkkl.hantekapi.constants.VoltageRange;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Class representing channel of oscilloscope.
@@ -100,9 +99,9 @@ public class ScopeChannel {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
         if(id == Channels.CH1)
-            oscilloscope.patch(HantekRequest.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId()))
+            oscilloscope.patch(HantekRequestFactory.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId()))
                     .onFailureThrow((ex) -> new RuntimeException(ex));
-        else oscilloscope.patch(HantekRequest.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId()))
+        else oscilloscope.patch(HantekRequestFactory.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId()))
                 .onFailureThrow((ex) -> new RuntimeException(ex));
     }
 

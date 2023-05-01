@@ -1,6 +1,6 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
-import com.mkkl.hantekapi.communication.UsbConnectionConst;
+import com.mkkl.hantekapi.communication.HantekProtocolConstants;
 import org.usb4java.*;
 
 import java.nio.ByteBuffer;
@@ -9,7 +9,7 @@ import java.nio.IntBuffer;
 
 public class BulkEndpoint extends Endpoint{
     public BulkEndpoint(DeviceHandle deviceHandle, InterfaceDescriptor interfaceDescriptor) {
-        super(UsbConnectionConst.BULK_ENDPOINT_ADDRESS, deviceHandle, interfaceDescriptor);
+        super(HantekProtocolConstants.BULK_ENDPOINT_ADDRESS, deviceHandle, interfaceDescriptor);
         if((endpointDescriptor.bmAttributes() & LibUsb.TRANSFER_TYPE_MASK) != LibUsb.TRANSFER_TYPE_BULK)
             throw new RuntimeException("Endpoint is not of type bulk");
     }

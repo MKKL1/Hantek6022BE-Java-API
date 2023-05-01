@@ -3,7 +3,7 @@ package com.mkkl.hantekapi;
 import com.mkkl.hantekapi.channel.ActiveChannels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
-import com.mkkl.hantekapi.constants.HantekDevices;
+import com.mkkl.hantekapi.constants.HantekDeviceType;
 import com.mkkl.hantekapi.devicemanager.HantekDeviceList;
 import com.mkkl.hantekapi.devicemanager.OscilloscopeManager;
 
@@ -53,10 +53,10 @@ public class ScopeUtils {
         }
     }
 
-    public static Oscilloscope getAndFlashFirmware(HantekDevices hantekDevices) throws InterruptedException {
+    public static Oscilloscope getAndFlashFirmware(HantekDeviceType hantekDeviceType) throws InterruptedException {
         HantekDeviceList hantekDeviceList = OscilloscopeManager.findSupportedDevices();
         //Find connected oscilloscopes of type DSO6022BE and choose first found
-        Oscilloscope oscilloscope = hantekDeviceList.getFirstFound(hantekDevices);
+        Oscilloscope oscilloscope = hantekDeviceList.getFirstFound(hantekDeviceType);
 
         int tries = 20;
         //Check if software is found, if not flash new firmware
@@ -68,7 +68,7 @@ public class ScopeUtils {
                 Thread.sleep(100);
                 try {
                     oscilloscope = OscilloscopeManager.findSupportedDevices()
-                            .getFirstFound(hantekDevices);
+                            .getFirstFound(hantekDeviceType);
                     tries--;
                     if(tries == 0) throw new RuntimeException("Failed to find device after firmware flash");
                 } catch (NoSuchElementException e) {

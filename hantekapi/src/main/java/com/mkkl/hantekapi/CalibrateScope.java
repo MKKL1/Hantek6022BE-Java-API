@@ -3,7 +3,7 @@ package com.mkkl.hantekapi;
 import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
-import com.mkkl.hantekapi.constants.SampleRates;
+import com.mkkl.hantekapi.constants.SampleRate;
 import com.mkkl.hantekapi.constants.VoltageRange;
 import org.usb4java.LibUsbException;
 
@@ -21,7 +21,7 @@ public class CalibrateScope {
             for (VoltageRange voltageRange : VoltageRange.values()) {
                 oscilloscope.getChannel(Channels.CH1).setVoltageRange(voltageRange);
                 oscilloscope.getChannel(Channels.CH2).setVoltageRange(voltageRange);
-                oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
+                oscilloscope.setSampleRate(SampleRate.SAMPLES_100kS_s);
                 Thread.sleep(100);
                 System.out.println("Low speed " + voltageRange.name());
                 float[] lowspeed = ScopeUtils.readRawAverages(oscilloscope, reader, (short) (512*12), 10);
@@ -29,7 +29,7 @@ public class CalibrateScope {
                 calibrationData.setFormattedOffset(Channels.CH2, voltageRange, true, lowspeed[1]+128);
 
                 Thread.sleep(100);
-                oscilloscope.setSampleRate(SampleRates.SAMPLES_30MS_s);
+                oscilloscope.setSampleRate(SampleRate.SAMPLES_30MS_s);
                 Thread.sleep(100);
                 System.out.println("High speed " + voltageRange.name());
                 calibrationData.setFormattedOffset(Channels.CH1, voltageRange, false,

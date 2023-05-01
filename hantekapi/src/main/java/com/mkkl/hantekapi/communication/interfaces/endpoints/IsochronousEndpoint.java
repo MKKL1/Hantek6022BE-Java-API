@@ -1,14 +1,13 @@
 package com.mkkl.hantekapi.communication.interfaces.endpoints;
 
-import com.mkkl.hantekapi.communication.UsbConnectionConst;
+import com.mkkl.hantekapi.communication.HantekProtocolConstants;
 import org.usb4java.*;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 
 public class IsochronousEndpoint extends Endpoint {
     public IsochronousEndpoint(DeviceHandle deviceHandle, InterfaceDescriptor interfaceDescriptor) {
-        super(UsbConnectionConst.ISO_ENDPOINT_ADDRESS, deviceHandle, interfaceDescriptor);
+        super(HantekProtocolConstants.ISO_ENDPOINT_ADDRESS, deviceHandle, interfaceDescriptor);
         if((endpointDescriptor.bmAttributes() & LibUsb.TRANSFER_TYPE_MASK) != LibUsb.TRANSFER_TYPE_ISOCHRONOUS)
             throw new RuntimeException("Endpoint is not isochronous");
     }

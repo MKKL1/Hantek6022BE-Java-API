@@ -2,7 +2,7 @@ package com.mkkl.hantekapi.devicemanager;
 
 import com.mkkl.hantekapi.LibUsbInstance;
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.constants.HantekDevices;
+import com.mkkl.hantekapi.constants.HantekDeviceType;
 import org.usb4java.*;
 
 import java.util.*;
@@ -28,7 +28,7 @@ public class OscilloscopeManager {
         if(result < 0) throw new LibUsbException("Unable to get device list", result);
 
         //List of hantek devices eg. DSO6021,DSO6022BE,DSO6022BL
-        List<HantekDevices> hantekDevices = Stream.of(HantekDevices.values()).toList();
+        List<HantekDeviceType> hantekDevices = Stream.of(HantekDeviceType.values()).toList();
         List<HantekDeviceRecord> deviceList = new ArrayList<>();
         try
         {
@@ -42,7 +42,7 @@ public class OscilloscopeManager {
                     //Check if vendor id matches any of defined values
                     boolean vendorIdGood = (desc.idVendor() == FIRMWARE_PRESENT_VENDOR_ID || desc.idVendor() == NO_FIRMWARE_VENDOR_ID);
                     //Check if product id matches any of DSO6021,DSO6022BE,DSO6022BL
-                    Optional<HantekDevices> deviceType = hantekDevices.stream()
+                    Optional<HantekDeviceType> deviceType = hantekDevices.stream()
                             .filter(x -> x.getProductId() == desc.idProduct())
                             .findFirst();
                     boolean productIdGood = deviceType.isPresent();

@@ -1,7 +1,7 @@
 package com.mkkl.hantekapi.devicemanager;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.constants.HantekDevices;
+import com.mkkl.hantekapi.constants.HantekDeviceType;
 import org.usb4java.LibUsbException;
 
 import java.util.List;
@@ -13,7 +13,7 @@ public class HantekDeviceList {
         this.connections = connections;
     }
 
-    public Oscilloscope getFirstFound(HantekDevices scope) throws LibUsbException {
+    public Oscilloscope getFirstFound(HantekDeviceType scope) throws LibUsbException {
         return connections
                 .stream()
                 .filter(x -> x.deviceType() == scope)

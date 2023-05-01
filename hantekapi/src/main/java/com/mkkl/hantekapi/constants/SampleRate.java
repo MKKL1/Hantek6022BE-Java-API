@@ -1,6 +1,6 @@
 package com.mkkl.hantekapi.constants;
 
-public enum SampleRates {
+public enum SampleRate {
     SAMPLES_20kS_s(102, 20000, false),
     SAMPLES_40kS_s(104, 40000, false),
     SAMPLES_50kS_s(105, 50000, false),
@@ -28,7 +28,7 @@ public enum SampleRates {
     private final int sampleCount;
     private final boolean singleChannel;
 
-    SampleRates(int rateid, int sampleCount, boolean singleChannel) {
+    SampleRate(int rateid, int sampleCount, boolean singleChannel) {
         this.rateid = (byte)rateid;
         this.sampleCount = sampleCount;
         this.singleChannel = singleChannel;

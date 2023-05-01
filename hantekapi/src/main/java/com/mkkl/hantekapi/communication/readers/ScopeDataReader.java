@@ -1,12 +1,9 @@
 package com.mkkl.hantekapi.communication.readers;
 
 import com.mkkl.hantekapi.Oscilloscope;
-import com.mkkl.hantekapi.communication.controlcmd.HantekRequest;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
-import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public abstract class ScopeDataReader implements Closeable {
     protected final Oscilloscope oscilloscope;
