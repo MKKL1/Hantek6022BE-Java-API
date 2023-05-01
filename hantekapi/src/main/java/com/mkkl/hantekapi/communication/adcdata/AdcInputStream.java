@@ -7,7 +7,6 @@ import com.mkkl.hantekapi.channel.ScopeChannel;
 import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 /**
  * Stream used for parsing data read from oscilloscope ADC.
@@ -21,7 +20,7 @@ public abstract class AdcInputStream extends FilterInputStream{
     protected final int packetSize;
 
     public static AdcInputStream create(InputStream in, ChannelManager channelManager, int packetSize, ActiveChannels activeChannels) {
-        if(activeChannels.singleMode())
+        if(activeChannels.isSingleMode())
             return new SingleModeADCStream(in, channelManager, packetSize);
         else return new DoubleModeADCStream(in, channelManager, packetSize);
     }
@@ -34,7 +33,7 @@ public abstract class AdcInputStream extends FilterInputStream{
         ChannelManager channelManager = oscilloscope.getChannelManager();
         int packetSize = oscilloscope.getScopeInterface().getEndpoint().getPacketSize();
 
-        if(channelManager.getActiveChannels().singleMode())
+        if(channelManager.getActiveChannels().isSingleMode())
             return new SingleModeADCStream(in, channelManager, packetSize);
         else return new DoubleModeADCStream(in, channelManager, packetSize);
     }
@@ -97,4 +96,56 @@ public abstract class AdcInputStream extends FilterInputStream{
 //            data[i] = readFormattedVoltages();
 //        return data;
 //    }
+}
+
+class DoubleModeADCStream extends AdcInputStream{
+    public DoubleModeADCStream(InputStream in, ChannelManager channelManager, int packetSize) {
+        super(in, channelManager, packetSize);
+    }
+
+    /**
+     * Reads two bytes from input stream corresponding to data sample of each channel
+     * @return byte array with length of 2, where index 0 is voltage data of CH1 and index of 1 respectively CH2
+     * @throws EOFException on end of stream
+     * @throws IOException if other I/O error occurs
+     */
+    public byte[] readRawVoltages() throws IOException {
+        int ch1 = read();
+        int ch2 = read();
+        if((ch1 | ch2) < 0)
+            throw new EOFException();
+        return new byte[] {(byte) ch1, (byte) ch2};
+    }
+
+    /**
+     * Uses {@link AdcInputStream#readRawVoltages()} and formats each data sample with {@link ScopeChannel#formatData(byte)}.
+     * @return float array of formatted data samples (measured voltages). index 0 - CH1, index 1 - CH2
+     * @throws EOFException on end of stream
+     * @throws IOException if other I/O error occurs
+     */
+    public float[] readFormattedVoltages() throws IOException {
+        byte[] rawdata = readRawVoltages();
+        float[] fdata = new float[2];
+        for (int i = 0; i < 2; i++)
+            fdata[i] = channels.get(i).formatData(rawdata[i]);
+        return fdata;
+    }
+}
+
+class SingleModeADCStream extends AdcInputStream {
+    public SingleModeADCStream(InputStream in, ChannelManager channelManager, int packetSize) {
+        super(in, channelManager, packetSize);
+    }
+
+    @Override
+    public byte[] readRawVoltages() throws IOException {
+        int ch1 = read();
+        if(ch1 < 0) throw new EOFException();
+        return new byte[] {(byte) ch1};
+    }
+
+    @Override
+    public float[] readFormattedVoltages() throws IOException {
+        return new float[] {channels.get(0).formatData(readRawVoltages()[0])};
+    }
 }
