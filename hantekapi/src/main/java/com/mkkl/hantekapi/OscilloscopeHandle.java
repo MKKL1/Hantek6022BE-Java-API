@@ -36,8 +36,8 @@ public class OscilloscopeHandle implements AutoCloseable {
     private final Oscilloscope oscilloscope;
     private final UsbDevice usbDevice;
 
-    private DeviceHandle deviceHandle;
-    private ChannelManager channelManager;
+    private final DeviceHandle deviceHandle;
+    private final ChannelManager channelManager;
     private SampleRate currentSampleRate;
 
     private final ScopeUsbInterface scopeUsbInterface;
@@ -50,6 +50,7 @@ public class OscilloscopeHandle implements AutoCloseable {
         this.usbDevice = oscilloscope.getUsbDevice();
 
         channelManager = ChannelManager.create(this);
+        deviceHandle = usbDevice.open();
         scopeUsbInterface = new ScopeUsbInterface(usbDevice);
         scopeUsbInterface.setInterface(usbInterfaceType);
         scopeUsbInterface.claim();
