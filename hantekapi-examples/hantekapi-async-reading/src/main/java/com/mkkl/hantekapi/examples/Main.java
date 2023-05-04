@@ -3,6 +3,7 @@ package com.mkkl.hantekapi.examples;
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.ScopeUtils;
+import com.mkkl.hantekapi.channel.Channels;
 import com.mkkl.hantekapi.communication.adcdata.AdcInputStream;
 import com.mkkl.hantekapi.communication.readers.async.AsyncScopeDataReader;
 import com.mkkl.hantekapi.communication.readers.ByteArrayCallback;

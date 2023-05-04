@@ -16,31 +16,34 @@ public class InitializeScopeExtension implements BeforeAllCallback, ExtensionCon
 
     @Override
     public void beforeAll(ExtensionContext extensionContext) throws Exception {
+        System.out.println("before all init");
         if(!started) {
+            System.out.println("before all init start");
             started = true;
             HantekDeviceList hantekDeviceList = OscilloscopeManager.findSupportedDevices();
 
             Assertions.assertNotEquals(hantekDeviceList.getConnections().size(), 0, "No device was connected");
-            final Oscilloscope[] oscilloscope = {hantekDeviceList.getConnections().get(0).oscilloscope()};
-            final OscilloscopeHandle[] oscilloscopeHandle = {oscilloscope[0].setup()};
-            Assertions.assertNotNull(oscilloscope[0], "Failed to get oscilloscope");
+            Oscilloscope oscilloscope = hantekDeviceList.getConnections().get(0).oscilloscope();
+            Assertions.assertNotNull(oscilloscope, "Failed to get oscilloscope");
+            final OscilloscopeHandle oscilloscopeHandle = oscilloscope.setup();
+            Assertions.assertNotNull(oscilloscopeHandle, "Failed to initialize oscilloscope");
 
             int tries = 20;
-            if (!oscilloscope[0].isFirmwarePresent()) {
-                oscilloscopeHandle[0].flash_firmware();
-                while(oscilloscope[0] == null || !oscilloscope[0].isFirmwarePresent()) {
+            if (!oscilloscope.isFirmwarePresent()) {
+                oscilloscopeHandle.flash_firmware();
+                while(oscilloscope == null || !oscilloscope.isFirmwarePresent()) {
                     Thread.sleep(100);
                     try {
-                        oscilloscope[0] = OscilloscopeManager.findSupportedDevices().getConnections().get(0).oscilloscope();
+                        oscilloscope = OscilloscopeManager.findSupportedDevices().getConnections().get(0).oscilloscope();
                         tries--;
                         if(tries == 0) throw new RuntimeException("Failed to find device after firmware flash");
                     } catch (NoSuchElementException e) {
-                        oscilloscope[0] = null;
+                        oscilloscope = null;
                     }
                 }
             }
 
-            InitializeScopeExtension.oscilloscopeHandle = oscilloscope[0].setup();
+            InitializeScopeExtension.oscilloscopeHandle = oscilloscope.setup();
         }
     }
 

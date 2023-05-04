@@ -1,6 +1,5 @@
 package com.mkkl.hantekapi.channel;
 
-import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.communication.controlcmd.HantekRequestFactory;
 import com.mkkl.hantekapi.constants.VoltageRange;
@@ -42,7 +41,7 @@ public class ScopeChannel {
     private float current_gain;
     private float current_scale_factor = 1;
     private VoltageRange currentVoltageRange = VoltageRange.RANGE5000mV;
-    private int probeMultiplier = 1;
+    private int atteunationFactor = 1;
     private float additionalOffset = 0;
 
     //Used to temporarily save data from AdcInputStream for reading from channel
@@ -100,9 +99,9 @@ public class ScopeChannel {
         this.currentVoltageRange = currentVoltageRange;
         recalculate_scalefactor();
         if(id == Channels.CH1)
-            oscilloscopeHandle.patch(HantekRequestFactory.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId()))
+            oscilloscopeHandle.writeControl(HantekRequestFactory.getVoltRangeCH1Request((byte) currentVoltageRange.getGainId()))
                     .onFailureThrow((ex) -> new RuntimeException(ex));
-        else oscilloscopeHandle.patch(HantekRequestFactory.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId()))
+        else oscilloscopeHandle.writeControl(HantekRequestFactory.getVoltRangeCH2Request((byte) currentVoltageRange.getGainId()))
                 .onFailureThrow((ex) -> new RuntimeException(ex));
     }
 
@@ -111,11 +110,11 @@ public class ScopeChannel {
     }
 
     /**
-     * Sets probe multiplier factor.
-     * @param probeMultiplier any int (most likely 1 or 10)
+     * Sets probe attenuation factor.
+     * @param attenuationFactor any int (most likely 1 or 10)
      */
-    public void setProbeMultiplier(int probeMultiplier) {
-        this.probeMultiplier = probeMultiplier;
+    public void setProbeAttenuation(int attenuationFactor) {
+        this.atteunationFactor = atteunationFactor;
         recalculate_scalefactor();
     }
 
@@ -152,8 +151,8 @@ public class ScopeChannel {
         return currentVoltageRange;
     }
 
-    public int getProbeMultiplier() {
-        return probeMultiplier;
+    public int getAtteunationFactor() {
+        return atteunationFactor;
     }
 
 
@@ -164,7 +163,7 @@ public class ScopeChannel {
     private void recalculate_scalefactor() {
         current_offset = offsets.get(currentVoltageRange);
         current_gain = gains.get(currentVoltageRange);
-        current_scale_factor = ((5.12f * probeMultiplier * current_gain) / (float)(currentVoltageRange.getGainId() << 7));
+        current_scale_factor = ((5.12f * atteunationFactor * current_gain) / (float)(currentVoltageRange.getGainId() << 7));
     }
 
     @Override
@@ -175,7 +174,7 @@ public class ScopeChannel {
                 ", current_gain=" + current_gain +
                 ", current_scale_factor=" + current_scale_factor +
                 ", currentVoltageRange=" + currentVoltageRange.name() +
-                ", probeMultiplier=" + probeMultiplier +
+                ", probeMultiplier=" + atteunationFactor +
                 ", additionalOffset=" + additionalOffset +
                 '}';
     }

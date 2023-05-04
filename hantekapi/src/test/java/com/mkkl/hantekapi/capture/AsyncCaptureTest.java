@@ -24,6 +24,7 @@ public class AsyncCaptureTest {
 
     @BeforeAll
     static void setUp() {
+        System.out.println("before all async");
         oscilloscopeHandle = InitializeScopeExtension.getOscilloscopeHandle();
         asyncScopeDataReader = new AsyncScopeDataReader(oscilloscopeHandle);
     }
@@ -76,7 +77,7 @@ public class AsyncCaptureTest {
                         countOfZeros++;
                     else countOfZeros = 0;
 
-                    if(countOfZeros > 128) Assertions.fail("Buffer had too many 0 in row");
+                    if(countOfZeros > 128) Assertions.fail("Byte array had too many 0 in row");
                 }
                 latch.countDown();
             }

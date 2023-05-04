@@ -1,6 +1,5 @@
 package com.mkkl.hantekapi.channel;
 
-import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.OscilloscopeHandle;
 import com.mkkl.hantekapi.communication.controlcmd.HantekRequestFactory;
 import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
@@ -35,7 +34,7 @@ public class ChannelManager {
      * Sets number of active channels for future reference.
      */
     public void setActiveChannelCount(ActiveChannels activeChannels) {
-        oscilloscopeHandle.patch(HantekRequestFactory.getChangeChCountRequest((byte) activeChannels.getActiveCount()))
+        oscilloscopeHandle.writeControl(HantekRequestFactory.getChangeChCountRequest((byte) activeChannels.getActiveCount()))
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set active channels ", ex))
                 .onSuccess(() -> this.activeChannels = activeChannels);
     }

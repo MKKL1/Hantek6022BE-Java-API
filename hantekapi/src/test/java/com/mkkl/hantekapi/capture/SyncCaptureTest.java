@@ -21,6 +21,7 @@ public class SyncCaptureTest {
 
     @BeforeAll
     static void setUp() {
+        System.out.println("before all sync");
         oscilloscopeHandle = InitializeScopeExtension.getOscilloscopeHandle();
         syncScopeDataReader = new SyncScopeDataReader(oscilloscopeHandle);
     }

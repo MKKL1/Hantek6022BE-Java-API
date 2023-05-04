@@ -45,10 +45,11 @@ public class UsbDevice {
     }
 
     public String getStringDescriptor() {
+        if(!open) throw new RuntimeException("DeviceHandle not initialized");
         final ByteBuffer data = ByteBuffer.allocateDirect(256);
 
         int result = LibUsb.getStringDescriptor(deviceHandle, getDeviceDescriptor().iProduct(), (byte) 0, data);
-        if(result != LibUsb.SUCCESS) throw new LibUsbException("Unable to read device string descriptor", result);
+        if(result < 0) throw new LibUsbException("Unable to read device string descriptor", result);
 
         byte[] bString = new byte[data.get(0)-2];
         data.position(2);
@@ -57,7 +58,7 @@ public class UsbDevice {
         return new String(bString, StandardCharsets.UTF_16LE);
     }
 
-    public boolean isOpen() {
+    public boolean isHandleOpen() {
         return open;
     }
 

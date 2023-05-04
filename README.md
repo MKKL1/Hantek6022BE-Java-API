@@ -1,44 +1,31 @@
 # Hantek Java Api
 Port of [Hantek6022API](https://github.com/Ho-Ro/Hantek6022API) python api for java.
 ## Examples
-Find device with
+Find and flash device
 ```java
-Oscilloscope oscilloscope = OscilloscopeManager.findAndGetFirst(OscilloscopeDevices.DSO6022BE);
-```
-Then flash firmware
-```java
-if (!oscilloscope.isFirmwarePresent()) {
-    oscilloscope.flash_firmware();
-    while(oscilloscope == null || !oscilloscope.isFirmwarePresent()) {
-        Thread.sleep(100);
-        oscilloscope = OscilloscopeManager.findAndGetFirst(OscilloscopeDevices.DSO6022BE);
-    }
-}
+Oscilloscope oscilloscope = ScopeUtils.getAndFlashFirmware(HantekDeviceType.DSO6022BE);
 ```
 Set your parameters
 ```java
-oscilloscope.setup()
-oscilloscope.setActiveChannels(ActiveChannels.CH1CH2);
-oscilloscope.setSampleRate(SampleRates.SAMPLES_100kS_s);
-oscilloscope.getChannel(Channels.CH1).setVoltageRange(VoltageRange.RANGE5000mV);
-oscilloscope.getChannel(Channels.CH2).setVoltageRange(VoltageRange.RANGE5000mV);
-oscilloscope.getChannel(Channels.CH1).setProbeMultiplier(10);
-oscilloscope.getChannel(Channels.CH2).setProbeMultiplier(10);
+OscilloscopeHandle oscilloscopeHandle = oscilloscope.setup();
+oscilloscopeHandle.setActiveChannels(ActiveChannels.CH1CH2);
+oscilloscopeHandle.setSampleRate(SampleRates.SAMPLES_100kS_s);
+oscilloscopeHandle.getChannel(Channels.CH2).setVoltageRange(VoltageRange.RANGE5000mV);
+oscilloscopeHandle.getChannel(Channels.CH2).setProbeAttenuation(10);
 ```
 Get calibration data from oscilloscope's eeprom
 ```java
-oscilloscope.setCalibration(oscilloscope.readCalibrationValues());
+oscilloscopeHandle.setCalibration(oscilloscopeHandle.readCalibrationValues());
 ```
 Read data from device
 ```java
-ScopeDataReader syncScopeDataReader = oscilloscope.createDataReader();
-byte[] bytes = syncScopeDataReader.syncRead((short) 1024);
-AdcInputStream input = new AdcInputStream(new ByteArrayInputStream(bytes), oscilloscope);
-int readBytes = 0;
-while (readBytes < bytes.length) {
-    float[] channelData = input.readFormattedVoltages();
-    System.out.printf("CH1=%.2fV CH2=%.2fV\n", channelData[0], channelData[1]);
-    readBytes+=2;
+SyncScopeDataReader syncScopeDataReader = oscilloscopeHandle.createSyncDataReader();
+byte[] bytes = syncScopeDataReader.readToByteArray((short) 1024);
+AdcInputStream input = AdcInputStream.create(new ByteArrayInputStream(bytes), oscilloscopeHandle);
+
+for (int readBytes = 0; readBytes < bytes.length; readBytes += 2) {
+    float[] f = input.readFormattedVoltages();
+    System.out.printf("CH1=%.2fV CH2=%.2fV\n", f[0], f[1]);
 }
 ```
 ## Todo

@@ -19,9 +19,6 @@ public class OscilloscopeManager {
     private static final short FIRMWARE_PRESENT_VENDOR_ID = 0x04B5;
 
     public static HantekDeviceList findSupportedDevices() throws LibUsbException {
-        //Initialize context
-
-
         //Initialize device list
         DeviceList devices = new DeviceList();
         int result = LibUsb.getDeviceList(LibUsbInstance.getContext(), devices);

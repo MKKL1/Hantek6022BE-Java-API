@@ -6,10 +6,10 @@ import java.util.HexFormat;
 
 //TODO read any firmware, either from file or byte array
 
-public class FirmwareReader extends Reader {
+public class FirmwareFileReader extends Reader {
     private final BufferedReader bufferedReader;
 
-    public FirmwareReader(BufferedReader bufferedReader) {
+    public FirmwareFileReader(BufferedReader bufferedReader) {
         this.bufferedReader = bufferedReader;
     }
 

@@ -20,7 +20,7 @@ import com.mkkl.hantekapi.constants.HantekDeviceType;
 import com.mkkl.hantekapi.constants.SampleRate;
 import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
 import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
-import com.mkkl.hantekapi.firmware.FirmwareReader;
+import com.mkkl.hantekapi.firmware.FirmwareFileReader;
 import com.mkkl.hantekapi.firmware.ScopeFirmware;
 import com.mkkl.hantekapi.firmware.SupportedFirmwares;
 import org.usb4java.DeviceDescriptor;
@@ -32,6 +32,11 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+/**
+ * Class that handles requests to and from oscilloscope after initialization of {@link Oscilloscope}.
+ * Provides high level methods used to interact with device,
+ * as well as lower level methods for direct communication.
+ */
 public class OscilloscopeHandle implements AutoCloseable {
     private final Oscilloscope oscilloscope;
     private final UsbDevice usbDevice;
@@ -62,7 +67,7 @@ public class OscilloscopeHandle implements AutoCloseable {
      * @param controlRequest Request data from {@link HantekRequestFactory}
      * @return raw response from device
      */
-    public ControlResponse<byte[]> request(final ControlRequest controlRequest) {
+    public ControlResponse<byte[]> readControl(final ControlRequest controlRequest) {
         byte[] bytes = null;
         LibUsbException e = null;
         try {
@@ -80,8 +85,8 @@ public class OscilloscopeHandle implements AutoCloseable {
      * @param <T> extends {@link SerializableData}
      * @return Deserialized response
      */
-    public <T extends SerializableData> ControlResponse<T> request(final ControlRequest controlRequest, final Class<T> clazz) {
-        ControlResponse<byte[]> rawResponse = request(controlRequest);
+    public <T extends SerializableData> ControlResponse<T> readControl(final ControlRequest controlRequest, final Class<T> clazz) {
+        ControlResponse<byte[]> rawResponse = readControl(controlRequest);
         Exception e = null;
         T body = null;
         try {
@@ -100,7 +105,7 @@ public class OscilloscopeHandle implements AutoCloseable {
      * @param controlRequest Request data from {@link HantekRequestFactory}
      * @return response without data, used for passing exception
      */
-    public ControlResponse<Void> patch(final ControlRequest controlRequest) {
+    public ControlResponse<Void> writeControl(final ControlRequest controlRequest) {
         LibUsbException e = null;
         try {
             controlRequest.write(deviceHandle);
@@ -131,13 +136,19 @@ public class OscilloscopeHandle implements AutoCloseable {
      * @see OscilloscopeHandle#setActiveChannels(ActiveChannels)
      */
     public void setSampleRate(SampleRate sampleRate) {
-        patch(HantekRequestFactory.getSampleRateSetRequest(sampleRate.getSampleRateId()))
+        writeControl(HantekRequestFactory.getSampleRateSetRequest(sampleRate.getSampleRateId()))
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set sample rate",ex))
                 .onSuccess(() -> currentSampleRate = sampleRate);
     }
 
+    /**
+     * Sets the sample rate for oscilloscope to capture at.
+     * Bigger sample rate means more samples have to be read to capture data for the same time.
+     * For sample rates greater than 30M samples/s, only single channel(CH1) can capture data.
+     * @param sampleRateId id of {@link SampleRate}, given by {@link SampleRate#getSampleRateId()}
+     */
     public void setSampleRate(byte sampleRateId) {
-        patch(HantekRequestFactory.getSampleRateSetRequest(sampleRateId))
+        writeControl(HantekRequestFactory.getSampleRateSetRequest(sampleRateId))
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set sample rate",ex))
                 .onSuccess(() ->
                         currentSampleRate = Arrays
@@ -154,7 +165,7 @@ public class OscilloscopeHandle implements AutoCloseable {
      * @return Deserialized calibration data
      */
     public CalibrationData readCalibrationValues() {
-        ControlResponse<CalibrationData> r = request(
+        ControlResponse<CalibrationData> r = readControl(
                 HantekRequestFactory.getEepromReadRequest(HantekProtocolConstants.CALIBRATION_EEPROM_OFFSET, (short) 80), CalibrationData.class)
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to read calibration data", ex));
         return r.get();
@@ -172,7 +183,7 @@ public class OscilloscopeHandle implements AutoCloseable {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        patch(HantekRequestFactory.getEepromWriteRequest(HantekProtocolConstants.CALIBRATION_EEPROM_OFFSET, data))
+        writeControl(HantekRequestFactory.getEepromWriteRequest(HantekProtocolConstants.CALIBRATION_EEPROM_OFFSET, data))
                 .onFailureThrow((ex) -> new RuntimeException(ex.getMessage()));
     }
 
@@ -187,26 +198,29 @@ public class OscilloscopeHandle implements AutoCloseable {
     }
 
     /**
-     * Makes control request to device to tell it to start capturing samples.
+     * Makes control request to device to tell it, to start capturing samples.
      * Use before reading data from ADC.
      */
     public void startCapture() {
-        patch(HantekRequestFactory.getStartRequest())
+        writeControl(HantekRequestFactory.getStartRequest())
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to start capture", ex))
                 .onSuccess(() -> capture = true);
     }
 
     /**
-     * Makes control request to device to tell it to stop capturing samples.
+     * Makes control request to device to tell it, to stop capturing samples.
      * Supported only by custom openhantek firmware.
      * @see OscilloscopeHandle#flash_firmware()
      */
     public void stopCapture() {
-        patch(HantekRequestFactory.getStopRequest())
+        writeControl(HantekRequestFactory.getStopRequest())
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to stop capture", ex))
                 .onSuccess(() -> capture = false);
     }
 
+    /**
+     * Checks if capture was started by {@link #startCapture()}, if not it starts capture.
+     */
     public void ensureCaptureStarted() {
         if(!capture) startCapture();
     }
@@ -219,7 +233,7 @@ public class OscilloscopeHandle implements AutoCloseable {
      * @return response with raw data
      */
     public ControlResponse<byte[]> readEeprom(short offset, short length) {
-        return request(HantekRequestFactory.getEepromReadRequest(offset, length));
+        return readControl(HantekRequestFactory.getEepromReadRequest(offset, length));
     }
 
     /**
@@ -230,11 +244,11 @@ public class OscilloscopeHandle implements AutoCloseable {
      * @return response used for exception passing
      */
     public ControlResponse<Void> writeEeprom(short offset, byte[] data) {
-        return patch(HantekRequestFactory.getEepromWriteRequest(offset, data));
+        return writeControl(HantekRequestFactory.getEepromWriteRequest(offset, data));
     }
 
     /**
-     * Flashes device's firmware with found openhantek firmware.
+     * Flashes device's firmware with found openhantek's firmware.
      * If device is not in {@link HantekDeviceType}, {@link java.util.NoSuchElementException} will be thrown
      */
     public void flash_firmware() {
@@ -271,18 +285,18 @@ public class OscilloscopeHandle implements AutoCloseable {
      */
     public void flash_firmware(InputStream firmwareInputStream) throws IOException, LibUsbException {
         if (firmwareInputStream == null) throw new IOException("No firmware in input stream");
-        try(FirmwareReader firmwareReader = new FirmwareReader(new BufferedReader(new InputStreamReader(firmwareInputStream)))) {
-            flash_firmware(new ScopeFirmware(firmwareReader.readAll()));
+        try(FirmwareFileReader firmwareFileReader = new FirmwareFileReader(new BufferedReader(new InputStreamReader(firmwareInputStream)))) {
+            flash_firmware(new ScopeFirmware(firmwareFileReader.readAll()));
         }
     }
 
     /**
      * Flashes device's firmware
-     * @param firmware can be read with {@link FirmwareReader} from .hex or .ihex files (saved in resources)
+     * @param firmware can be read with {@link FirmwareFileReader} from .hex or .ihex files (saved in resources)
      */
     public void flash_firmware(ScopeFirmware firmware) throws LibUsbException {
         for(FirmwareControlPacket packet : firmware.getFirmwareData())
-            patch(HantekRequestFactory.getFirmwareRequest(packet.address(), packet.data())).onFailureThrow((e) -> (LibUsbException)e);
+            writeControl(HantekRequestFactory.getFirmwareRequest(packet.address(), packet.data())).onFailureThrow((e) -> (LibUsbException)e);
     }
 
     /**
@@ -297,7 +311,7 @@ public class OscilloscopeHandle implements AutoCloseable {
         else if (frequency < 5600) bytefreq = (byte) ((frequency/100)+200);
         else bytefreq = (byte) (frequency/1000);
 
-        patch(HantekRequestFactory.getCalibrationFreqSetRequest(bytefreq))
+        writeControl(HantekRequestFactory.getCalibrationFreqSetRequest(bytefreq))
                 .onFailureThrow((ex) -> new UncheckedUsbException("Failed to set calibration frequency", ex));
     }
 
@@ -321,23 +335,14 @@ public class OscilloscopeHandle implements AutoCloseable {
         return getChannel(channels.getChannelId());
     }
 
-    /**
-     * Use {@link Oscilloscope#setup(UsbInterfaceType)} before using this method
-     */
     public ScopeChannel getChannel(int id) {
         return channelManager.getChannel(id);
     }
 
-    /**
-     * Use {@link Oscilloscope#setup(UsbInterfaceType)} before using this method
-     */
     public ArrayList<ScopeChannel> getChannels() {
         return channelManager.getChannels();
     }
 
-    /**
-     * Use {@link Oscilloscope#setup(UsbInterfaceType)} before using this method
-     */
     public ChannelManager getChannelManager() {
         return channelManager;
     }

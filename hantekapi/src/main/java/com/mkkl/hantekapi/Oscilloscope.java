@@ -1,39 +1,15 @@
 package com.mkkl.hantekapi;
 
 import com.mkkl.hantekapi.channel.ActiveChannels;
-import com.mkkl.hantekapi.channel.ChannelManager;
-import com.mkkl.hantekapi.channel.Channels;
-import com.mkkl.hantekapi.channel.ScopeChannel;
-import com.mkkl.hantekapi.communication.HantekProtocolConstants;
-import com.mkkl.hantekapi.communication.readers.async.AsyncScopeDataReader;
-import com.mkkl.hantekapi.communication.readers.sync.SyncScopeDataReader;
-import com.mkkl.hantekapi.communication.controlcmd.*;
-import com.mkkl.hantekapi.communication.controlcmd.response.calibration.CalibrationData;
-import com.mkkl.hantekapi.communication.controlcmd.response.ControlResponse;
-import com.mkkl.hantekapi.communication.controlcmd.response.SerializableData;
-import com.mkkl.hantekapi.communication.Serialization;
-import com.mkkl.hantekapi.communication.interfaces.ScopeUsbInterface;
 import com.mkkl.hantekapi.communication.interfaces.UsbInterfaceType;
-import com.mkkl.hantekapi.communication.interfaces.endpoints.Endpoint;
-import com.mkkl.hantekapi.constants.SampleRate;
-import com.mkkl.hantekapi.constants.HantekDeviceType;
-import com.mkkl.hantekapi.exceptions.DeviceNotInitialized;
-import com.mkkl.hantekapi.exceptions.UncheckedUsbException;
-import com.mkkl.hantekapi.firmware.FirmwareControlPacket;
-import com.mkkl.hantekapi.firmware.FirmwareReader;
-import com.mkkl.hantekapi.firmware.ScopeFirmware;
-import com.mkkl.hantekapi.firmware.SupportedFirmwares;
 import org.usb4java.*;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HexFormat;
 
 /**
- * Class used to represent oscilloscope device.
- * Provides high level methods used to interact with device,
- * as well as lower level methods for direct communication.
+ * Class that's represents oscilloscope device.
+ * It doesn't provide any functionality to communicate with device, other than basic operations that doesn't require DeviceHandle from libusb library.
+ * To use more functions use {@link #setup()}
  */
 public class Oscilloscope {
 
@@ -57,8 +33,6 @@ public class Oscilloscope {
 
     /**
      * Method used to initialize connection with device's usb interface.
-     * While control request's can be sent without connecting to interface,
-     * {@link SyncScopeDataReader} requires it to read ADC data.
      * Use this method after finding device or after flashing firmware.
      * Connects to default bulk interface
      * @see Oscilloscope#setup(UsbInterfaceType)
@@ -69,8 +43,6 @@ public class Oscilloscope {
 
     /**
      * Method used to initialize connection with device's usb interface.
-     * While control request's can be sent without connecting to interface,
-     * {@link SyncScopeDataReader} requires it to read ADC data.
      * Use this method after finding device or after flashing firmware
      * @param usbInterfaceType Set which usb interface to use
      */
@@ -87,6 +59,9 @@ public class Oscilloscope {
         return oscilloscopeHandle;
     }
 
+    /**
+     * @return Returns true if found device's vendor id matches that of custom openhantek's firmware.
+     */
     public boolean isFirmwarePresent() {
         return firmwarePresent;
     }

@@ -34,7 +34,7 @@ public class AsyncScopeDataReader extends ScopeDataReader {
         transferCallback = this::initializeCallback;
     }
 
-    protected void initializeCallback(Transfer transfer) {
+    protected synchronized void initializeCallback(Transfer transfer) {
         transferProcessorThread.notifyReceivedPacket();
         for(UsbDataListener usbDataListener : listenerList)
             usbDataListener.processTransfer(transfer);
@@ -44,11 +44,11 @@ public class AsyncScopeDataReader extends ScopeDataReader {
         this(oscilloscopeHandle, 3);
     }
 
-    public void registerListener(UsbDataListener usbDataListener) {
+    public synchronized void registerListener(UsbDataListener usbDataListener) {
         listenerList.add(usbDataListener);
     }
 
-    public void unregisterListener(UsbDataListener usbDataListener) {
+    public synchronized void unregisterListener(UsbDataListener usbDataListener) {
         listenerList.remove(usbDataListener);
     }
 
