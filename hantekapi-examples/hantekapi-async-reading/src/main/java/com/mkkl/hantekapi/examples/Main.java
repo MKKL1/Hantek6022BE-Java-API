@@ -57,14 +57,13 @@ public class Main {
             AsyncScopeDataReader asyncDataReader = oscilloscopeHandle.createAsyncDataReader();
 
             //Reading data from oscilloscope with given length, 1024 means 512 bytes are read from each channel
-            OscilloscopeHandle finalOscilloscope = oscilloscopeHandle;
             ByteArrayCallback byteArrayCallback = new ByteArrayCallback() {
                 @Override
                 public void onDataReceived(byte[] bytes) {
                     try {
                         //TODO pass received data to processing thread
                         //Creating input stream for formatting output data of oscilloscope data reader
-                        AdcInputStream input = AdcInputStream.create(new ByteArrayInputStream(bytes), finalOscilloscope);
+                        AdcInputStream input = AdcInputStream.create(new ByteArrayInputStream(bytes), oscilloscopeHandle);
                         int readBytes = 0;
                         //Skipping corrupted data
                         //input.skipNBytes(lengthToSkip);

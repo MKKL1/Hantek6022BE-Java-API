@@ -53,7 +53,7 @@ public class ScopeUtils {
         }
     }
 
-    public static Oscilloscope getAndFlashFirmware(HantekDeviceType hantekDeviceType) throws InterruptedException {
+    public static Oscilloscope getAndFlashFirmware(HantekDeviceType hantekDeviceType) throws Exception {
         HantekDeviceList hantekDeviceList = OscilloscopeManager.findSupportedDevices();
         //Find connected oscilloscopes of type DSO6022BE and choose first found
         Oscilloscope oscilloscope = hantekDeviceList.getFirstFound(hantekDeviceType);

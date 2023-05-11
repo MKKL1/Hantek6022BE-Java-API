@@ -2,8 +2,11 @@ package com.mkkl.hantekapi.communication.readers.async;
 
 import com.mkkl.hantekapi.Oscilloscope;
 import com.mkkl.hantekapi.OscilloscopeHandle;
+import com.mkkl.hantekapi.communication.readers.UsbDataListener;
+import org.usb4java.LibUsb;
 import org.usb4java.Transfer;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -32,6 +35,15 @@ public class CachedAsyncReader extends AsyncScopeDataReader{
     }
 
     @Override
+    protected synchronized void initializeCallback(Transfer transfer) {
+        transferProcessorThread.notifyReceivedPacket();
+        transfer.buffer().clear();
+        for(UsbDataListener usbDataListener : listenerList)
+            usbDataListener.processTransfer(transfer);
+    }
+
+    //TODO this method should wait so that buffer is not used in different read request
+    @Override
     public void read() throws InterruptedException {
         oscilloscopeHandle.ensureCaptureStarted();
         transferQueue.put(getNextTransfer());
@@ -43,7 +55,6 @@ public class CachedAsyncReader extends AsyncScopeDataReader{
      */
     public synchronized Transfer getNextTransfer() {
         if(position >= savedLength) resetPosition();
-        cachedBuffers[position].clear();
         Transfer transfer = cachedTransfers[position];
         position++;
         return transfer;
@@ -53,4 +64,12 @@ public class CachedAsyncReader extends AsyncScopeDataReader{
         position = 0;
     }
 
+//    @Override
+//    public void close() throws IOException {
+//        super.close();
+//        for(int i = 0; i < savedLength; i++) {
+//            cachedBuffers[i] = null;
+//            if(cachedTransfers[i] != null) LibUsb.freeTransfer(cachedTransfers[i]);
+//        }
+//    }
 }

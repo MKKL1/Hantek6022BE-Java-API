@@ -15,8 +15,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class AsyncScopeDataReader extends ScopeDataReader {
-    private final EventHandlingThread eventHandlingThread;
-    private final TransferProcessorThread transferProcessorThread;
+    protected final EventHandlingThread eventHandlingThread;
+    protected final TransferProcessorThread transferProcessorThread;
     protected final BlockingQueue<Transfer> transferQueue;
     protected final List<UsbDataListener> listenerList = new ArrayList<UsbDataListener>();
     protected final TransferCallback transferCallback;
@@ -38,6 +38,7 @@ public class AsyncScopeDataReader extends ScopeDataReader {
         transferProcessorThread.notifyReceivedPacket();
         for(UsbDataListener usbDataListener : listenerList)
             usbDataListener.processTransfer(transfer);
+        LibUsb.freeTransfer(transfer);
     }
 
     public AsyncScopeDataReader(OscilloscopeHandle oscilloscopeHandle) {
